@@ -10,7 +10,7 @@
     "metadados": { "$ref": "comum.schema.json#/$defs/metadados" },
     "identificacao": {
       "$ref": "comum.schema.json#/$defs/identificacao",
-      "required": ["data", "fazenda", "talhao", "amostrador"]
+      "required": ["data", "fazenda", "talhao", "talhao_fid", "amostrador"]
     },
     "pontos": {
       "type": "array",

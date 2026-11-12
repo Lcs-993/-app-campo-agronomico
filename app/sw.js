@@ -2,8 +2,8 @@
 const VERSAO = 'campo-v1';
 const ARQUIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'parametros-pda.json', 'css/app.css',
-  'icones/icone.svg', 'icones/icone-192.png', 'icones/icone-512.png',
-  'js/main.js', 'js/ui.js', 'js/db.js', 'js/rotas.js', 'js/regras.js', 'js/fichas.js', 'js/componentes.js',
+  'icones/logo.png', 'icones/icone-192.png', 'icones/icone-512.png',
+  'js/main.js', 'js/ui.js', 'js/db.js', 'js/rotas.js', 'js/regras.js', 'js/fichas.js', 'js/componentes.js', 'js/talhoes.js',
   'js/telas/inicio.js', 'js/telas/ficha.js', 'js/telas/parametros.js',
 ];
 
@@ -30,5 +30,7 @@ self.addEventListener('fetch', (e) => {
     );
     return;
   }
+  // Talhões do WebGIS: o app guarda uma cópia própria no IndexedDB; aqui só passa adiante.
+  if (!new URL(e.request.url).pathname.startsWith(new URL(self.registration.scope).pathname)) return;
   e.respondWith(caches.match(e.request, { ignoreSearch: true }).then((r) => r ?? fetch(e.request)));
 });

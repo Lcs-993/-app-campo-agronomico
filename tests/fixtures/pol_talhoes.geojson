@@ -1,0 +1,204 @@
+{
+ "type": "FeatureCollection",
+ "name": "pol_talhoes",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "fid": 101,
+    "Fazenda": "9001-FAZENDA TESTE",
+    "Talhão": "TH-1",
+    "Variedade": "RB86-7515",
+    "Área (ha.)": 17.3,
+    "Proprietário": "FIXTURE DE TESTE",
+    "Origem da cana": "PRÓPRIA",
+    "Classificação": null,
+    "Data de plantio": null,
+    "Estágio de corte": null,
+    "TCH": null,
+    "Produção (t.)": null,
+    "Distância (Km)": null
+   },
+   "geometry": {
+    "type": "MultiPolygon",
+    "coordinates": [
+     [
+      [
+       [
+        -47.812,
+        -21.18
+       ],
+       [
+        -47.808,
+        -21.18
+       ],
+       [
+        -47.808,
+        -21.176
+       ],
+       [
+        -47.812,
+        -21.176
+       ],
+       [
+        -47.812,
+        -21.18
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "fid": 102,
+    "Fazenda": "9001-FAZENDA TESTE",
+    "Talhão": "TH-2",
+    "Variedade": "CTC4",
+    "Área (ha.)": 17.3,
+    "Proprietário": "FIXTURE DE TESTE",
+    "Origem da cana": "PRÓPRIA",
+    "Classificação": null,
+    "Data de plantio": null,
+    "Estágio de corte": null,
+    "TCH": null,
+    "Produção (t.)": null,
+    "Distância (Km)": null
+   },
+   "geometry": {
+    "type": "MultiPolygon",
+    "coordinates": [
+     [
+      [
+       [
+        -47.808,
+        -21.18
+       ],
+       [
+        -47.804,
+        -21.18
+       ],
+       [
+        -47.804,
+        -21.176
+       ],
+       [
+        -47.808,
+        -21.176
+       ],
+       [
+        -47.808,
+        -21.18
+       ]
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "fid": 103,
+    "Fazenda": "9002-FAZENDA VIZINHA",
+    "Talhão": "TH-3",
+    "Variedade": null,
+    "Área (ha.)": null,
+    "Proprietário": "FIXTURE DE TESTE",
+    "Origem da cana": "PRÓPRIA",
+    "Classificação": null,
+    "Data de plantio": null,
+    "Estágio de corte": null,
+    "TCH": null,
+    "Produção (t.)": null,
+    "Distância (Km)": null
+   },
+   "geometry": {
+    "type": "GeometryCollection",
+    "geometries": [
+     {
+      "type": "Polygon",
+      "coordinates": [
+       [
+        [
+         -47.812,
+         -21.184
+        ],
+        [
+         -47.808,
+         -21.184
+        ],
+        [
+         -47.808,
+         -21.18
+        ],
+        [
+         -47.812,
+         -21.18
+        ],
+        [
+         -47.812,
+         -21.184
+        ]
+       ]
+      ]
+     },
+     {
+      "type": "Point",
+      "coordinates": [
+       -47.812,
+       -21.184
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "fid": 104,
+    "Fazenda": "9001-FAZENDA TESTE",
+    "Talhão": null,
+    "Variedade": null,
+    "Área (ha.)": 1,
+    "Proprietário": "FIXTURE DE TESTE",
+    "Origem da cana": "PRÓPRIA",
+    "Classificação": null,
+    "Data de plantio": null,
+    "Estágio de corte": null,
+    "TCH": null,
+    "Produção (t.)": null,
+    "Distância (Km)": null
+   },
+   "geometry": {
+    "type": "MultiPolygon",
+    "coordinates": [
+     [
+      [
+       [
+        -47.9,
+        -21.3
+       ],
+       [
+        -47.899,
+        -21.3
+       ],
+       [
+        -47.899,
+        -21.299
+       ],
+       [
+        -47.9,
+        -21.299
+       ],
+       [
+        -47.9,
+        -21.3
+       ]
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

@@ -9,7 +9,7 @@
     "tipo_ficha": { "const": "cq_infestacao_final_broca" },
     "metadados": { "$ref": "comum.schema.json#/$defs/metadados" },
     "identificacao": { "$ref": "comum.schema.json#/$defs/identificacao" },
-    "area_ha": { "type": "number", "exclusiveMinimum": 0 },
+    "area_ha": { "type": "number", "exclusiveMinimum": 0, "description": "Área do talhão no WebGIS (atributo \"Área (ha.)\"); calculada do polígono se o atributo estiver vazio." },
     "amostras": {
       "type": "array",
       "minItems": 1,

@@ -1,8 +1,48 @@
 // Tela inicial: criar ficha nova e ver as fichas guardadas no aparelho.
 
-import { h, icone, barraTopo, chip, fmtData, aviso } from '../ui.js';
+import { h, icone, barraTopo, botaoTema, chip, fmtData, fmtHora, aviso } from '../ui.js';
 import { FICHAS } from '../fichas.js';
 import { listarFichas, carregarParametros, idDispositivo } from '../db.js';
+import { carregarTalhoes, atualizarTalhoes } from '../talhoes.js';
+
+/** Situação dos talhões do WebGIS no aparelho, com botão para atualizar. */
+function cartaoTalhoes() {
+  const texto = h('div', { class: 'talhoes-texto' });
+  const botao = h('button', { type: 'button', class: 'btn btn-secundario btn-pequeno' }, icone('atualizar', 18), 'Atualizar');
+  const cartao = h('section', { class: 'cartao cartao-talhoes' },
+    h('span', { class: 'linha-icone' }, icone('talhao', 22)), texto, botao);
+
+  async function desenhar(mensagem) {
+    const t = await carregarTalhoes();
+    cartao.classList.toggle('cartao-talhoes-pendente', !t);
+    if (!t) {
+      texto.replaceChildren(h('strong', null, 'Talhões do WebGIS não baixados'),
+        h('span', null, mensagem ?? 'Necessários para identificar o talhão pelo GPS. Baixe com internet antes de ir a campo.'));
+      return;
+    }
+    const quando = new Date(t.baixado_em);
+    texto.replaceChildren(h('strong', null, `${t.talhoes.length.toLocaleString('pt-BR')} talhões do WebGIS`),
+      h('span', null, mensagem ?? `Atualizados em ${fmtData(t.baixado_em)} às ${fmtHora(quando)}. Funcionam sem internet.`));
+  }
+
+  async function atualizar(silencioso) {
+    botao.disabled = true;
+    if (!silencioso) texto.lastChild && (texto.lastChild.textContent = 'Buscando a versão mais nova no WebGIS…');
+    const r = await atualizarTalhoes();
+    botao.disabled = false;
+    if (r.erro) {
+      await desenhar(silencioso ? undefined : `${r.erro} Os talhões já baixados continuam valendo.`);
+      if (!silencioso) aviso(r.erro, 'atencao');
+    } else {
+      await desenhar();
+      if (!silencioso) aviso(r.atualizado ? `Talhões atualizados: ${r.quantidade.toLocaleString('pt-BR')}.` : 'Os talhões já estão na versão mais nova.');
+    }
+  }
+
+  botao.addEventListener('click', () => atualizar(false));
+  desenhar().then(() => { if (navigator.onLine) atualizar(true); });
+  return cartao;
+}
 
 function cartaoNovaFicha(tipo, cfg) {
   return h('a', { href: `#/nova/${tipo}`, class: `cartao-nova cartao-nova-${cfg.icone}` },
@@ -19,7 +59,7 @@ function linhaFicha(registro, parametros) {
   const cfg = FICHAS[registro.tipo];
   const f = registro.ficha;
   const id = f.identificacao;
-  const local = [id.fazenda, id.talhao && `Talhão ${id.talhao}`].filter(Boolean).join(' · ') || 'Sem identificação';
+  const local = [id.talhao, id.fazenda].filter(Boolean).join(' · ') || 'Talhão ainda não identificado';
   const itens = f[cfg.colecao].length;
   return h('li', null,
     h('a', { href: `#/ficha/${registro.id}`, class: 'linha-ficha' },
@@ -70,11 +110,14 @@ export async function telaInicio() {
 
   return h('div', { class: 'tela' },
     barraTopo({
-      titulo: 'Campo Agronômico',
-      subtitulo: 'Fitossanidade · Controle de Qualidade',
-      acoes: h('a', { href: '#/parametros', class: 'btn-icone', 'aria-label': 'Parâmetros do PDA' }, icone('ajustes')),
+      comMarca: true,
+      acoes: [
+        botaoTema(),
+        h('a', { href: '#/parametros', class: 'topo-botao', 'aria-label': 'Parâmetros do PDA', title: 'Parâmetros do PDA' }, icone('ajustes', 18)),
+      ],
     }),
     h('main', { class: 'conteudo' },
+      cartaoTalhoes(),
       h('section', null,
         h('h2', { class: 'titulo-secao' }, 'Nova ficha'),
         h('div', { class: 'grade-novas' }, Object.entries(FICHAS).map(([tipo, cfg]) => cartaoNovaFicha(tipo, cfg)))),

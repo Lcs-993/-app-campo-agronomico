@@ -186,7 +186,7 @@ function geoDePosicao(pos) {
   return g;
 }
 
-function mensagemErroGps(err) {
+export function mensagemErroGps(err) {
   if (!navigator.geolocation) return 'Este aparelho não tem GPS disponível no navegador.';
   if (err?.code === 1) return 'Permissão de localização negada. Libere o acesso nas configurações do navegador.';
   if (err?.code === 3) return 'O GPS demorou para responder. Vá para céu aberto e tente de novo.';

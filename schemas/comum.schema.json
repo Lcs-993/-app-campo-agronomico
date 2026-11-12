@@ -34,11 +34,15 @@
     "identificacao": {
       "type": "object",
       "description": "Onde e quando a ficha foi preenchida. Cada ficha define quais campos são obrigatórios.",
-      "required": ["data", "fazenda", "talhao"],
+      "required": ["data", "fazenda", "talhao", "talhao_fid"],
       "properties": {
         "data": { "type": "string", "format": "date" },
-        "fazenda": { "type": "string", "minLength": 1 },
-        "talhao": { "type": "string", "minLength": 1 },
+        "fazenda": { "type": "string", "minLength": 1, "description": "Fazenda como no WebGIS (código-nome, ex.: 40002-ALTO PORTO REAL)." },
+        "talhao": { "type": "string", "minLength": 1, "description": "Nome do talhão no WebGIS (atributo \"Talhão\" de pol_talhoes)." },
+        "talhao_fid": {
+          "type": "integer",
+          "description": "Identificador do talhão no WebGIS (atributo fid de pol_talhoes.geojson). O app determina fazenda e talhão pela localização GPS."
+        },
         "bloco": { "type": "string", "minLength": 1 },
         "amostrador": { "type": "string", "minLength": 1 }
       },

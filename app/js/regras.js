@@ -1,7 +1,7 @@
 // Cálculos e regras de negócio das fichas.
 // Espelha scripts/validar_fichas.py: qualquer mudança aqui deve ser feita lá também.
 
-export const VERSAO_SCHEMA = '1.0.0';
+export const VERSAO_SCHEMA = '1.1.0';
 
 export const PRAGAS_SOLO = [
   { chave: 'migdolus', nome: 'Migdolus' },

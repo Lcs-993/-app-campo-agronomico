@@ -2,7 +2,7 @@
 // até a sincronização com o servidor.
 
 const NOME = 'app-campo-agronomico';
-const VERSAO = 1;
+const VERSAO = 2;
 let conexao;
 
 function abrir() {
@@ -13,6 +13,8 @@ function abrir() {
       const db = req.result;
       if (!db.objectStoreNames.contains('fichas')) db.createObjectStore('fichas', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('fotos')) db.createObjectStore('fotos', { keyPath: 'id' });
+      // Dados de apoio baixados (talhões do WebGIS).
+      if (!db.objectStoreNames.contains('cache')) db.createObjectStore('cache');
     };
     req.onsuccess = () => ok(req.result);
     req.onerror = () => falha(req.error);
@@ -40,6 +42,9 @@ export const excluirFicha = (id) => operar('fichas', 'readwrite', (s) => s.delet
 export const salvarFoto = (id, blob) => operar('fotos', 'readwrite', (s) => s.put({ id, blob }));
 export const obterFoto = async (id) => (await operar('fotos', 'readonly', (s) => s.get(id)))?.blob;
 export const excluirFoto = (id) => operar('fotos', 'readwrite', (s) => s.delete(id));
+
+export const obterCache = (chave) => operar('cache', 'readonly', (s) => s.get(chave));
+export const salvarCache = (chave, valor) => operar('cache', 'readwrite', (s) => s.put(valor, chave));
 
 export function idDispositivo() {
   try {

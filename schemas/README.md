@@ -17,12 +17,16 @@ A pasta `exemplos/` tem um registro válido de cada ficha.
 ```
 tipo_ficha       identifica a ficha (pragas_solo, cigarrinha_raiz, cq_infestacao_final_broca)
 metadados        id (UUID), versão do schema, datas, dispositivo, status de sincronização
-identificacao    data, fazenda, talhão, bloco, amostrador
+identificacao    data, fazenda, talhão e talhao_fid (do WebGIS, pelo GPS), bloco, amostrador
 pontos/amostras  uma entrada por ponto de amostragem, cada uma com GPS
 resultados       calculado pelo app (readOnly), nunca digitado
 ```
 
 Os limites (NDE de 1,0 ninfa/m; alerta acima de 3%; bloqueio acima de 5%) **não estão fixos nos schemas**: vêm de `parametros-pda.json`, para que o PDA possa alterá-los sem nova versão do app. Cada ficha guarda em `resultados` o limite usado no cálculo.
+
+## Versão 1.1.0
+
+Fazenda e talhão passam a vir da camada `pol_talhoes` do WebGIS, identificados pela localização GPS. `identificacao.talhao_fid` (o `fid` do talhão no WebGIS) é obrigatório, e a fazenda segue o formato do WebGIS (`código-nome`). Na ficha de CQ, `area_ha` é a área do talhão no WebGIS.
 
 ## Regras que o JSON Schema não cobre
 
@@ -40,6 +44,7 @@ O JSON Schema não compara um campo com outro nem refaz cálculos. Estas regras 
 | CQ broca | II ≤ 3% → `liberado`; 3% < II ≤ 5% → `alerta`; II > 5% → `bloqueado` |
 | CQ broca | `liberado_por_parecer_pda` / `reprovado_por_parecer_pda` só para talhão bloqueado, com `parecer_pda` coerente |
 | Todas | Números de ponto/amostra não se repetem |
+| Todas (no app) | A localização de cada ponto/amostra cai no talhão da ficha (tolerância de 30 m da borda) |
 
 Regras que o próprio schema garante: campos obrigatórios, contagens inteiras ≥ 0, intensidade de espuma de 1 a 3 (e ausente quando não há espuma), fotos do CQ sempre com GPS, `parecer_pda` obrigatório nos status por parecer, formatos de data, data-hora e UUID.
 

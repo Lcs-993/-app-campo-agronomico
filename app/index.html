@@ -3,13 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#1f5130">
+  <meta name="theme-color" content="#1c1c1e">
   <meta name="description" content="Fichas de campo de Fitossanidade e Controle de Qualidade da cana-de-açúcar, offline.">
-  <title>Campo Agronômico</title>
+  <title>WebGIS Campo</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icones/icone.svg" type="image/svg+xml">
+  <link rel="icon" href="icones/logo.png" type="image/png">
   <link rel="apple-touch-icon" href="icones/icone-192.png">
   <link rel="stylesheet" href="css/app.css">
+  <!-- Tema escuro por padrão, como no WebGIS; o claro vale se escolhido (mesma preferência do WebGIS). -->
+  <script>(function(){var t="dark";try{if(localStorage.getItem("webgis-theme")==="light"){t="light";}}catch(e){}document.documentElement.setAttribute("data-theme",t);if(t==="light"){document.querySelector('meta[name="theme-color"]').setAttribute("content","#e9e5de");}})();</script>
   <script type="module" src="js/main.js"></script>
 </head>
 <body>

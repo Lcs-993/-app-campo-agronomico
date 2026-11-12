@@ -2,33 +2,47 @@
   "tipo_ficha": "cigarrinha_raiz",
   "metadados": {
     "id": "a1c4e2d9-5b7f-4c3a-8e1d-2f9b6a0c7d41",
-    "versao_schema": "1.0.0",
+    "versao_schema": "1.1.0",
     "criado_em": "2026-11-11T07:30:00-03:00",
     "dispositivo_id": "tablet-campo-02",
     "status_sincronizacao": "pendente"
   },
   "identificacao": {
     "data": "2026-11-11",
-    "fazenda": "Fazenda Santa Rita",
-    "talhao": "T-015",
+    "fazenda": "40002-ALTO PORTO REAL",
+    "talhao": "TH-12",
+    "talhao_fid": 2,
     "amostrador": "Maria Souza"
   },
   "pontos": [
     {
       "numero": 1,
-      "geolocalizacao": { "latitude": -21.1822, "longitude": -47.8150, "capturado_em": "2026-11-11T07:35:00-03:00" },
+      "geolocalizacao": {
+        "latitude": -21.1822,
+        "longitude": -47.815,
+        "capturado_em": "2026-11-11T07:35:00-03:00"
+      },
       "metros_lineares": 2,
       "ninfas": 5,
       "adultos": 1,
-      "espuma": { "presente": true, "intensidade": 2 }
+      "espuma": {
+        "presente": true,
+        "intensidade": 2
+      }
     },
     {
       "numero": 2,
-      "geolocalizacao": { "latitude": -21.1830, "longitude": -47.8161, "capturado_em": "2026-11-11T07:52:00-03:00" },
+      "geolocalizacao": {
+        "latitude": -21.183,
+        "longitude": -47.8161,
+        "capturado_em": "2026-11-11T07:52:00-03:00"
+      },
       "metros_lineares": 2,
       "ninfas": 1,
       "adultos": 0,
-      "espuma": { "presente": false }
+      "espuma": {
+        "presente": false
+      }
     }
   ],
   "resultados": {

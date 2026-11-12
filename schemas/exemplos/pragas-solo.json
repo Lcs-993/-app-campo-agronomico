@@ -2,40 +2,91 @@
   "tipo_ficha": "pragas_solo",
   "metadados": {
     "id": "3f2b8c1e-7a4d-4e9b-9c2a-1d5e6f7a8b90",
-    "versao_schema": "1.0.0",
+    "versao_schema": "1.1.0",
     "criado_em": "2026-11-10T08:15:00-03:00",
     "dispositivo_id": "tablet-campo-01",
     "status_sincronizacao": "pendente"
   },
   "identificacao": {
     "data": "2026-11-10",
-    "fazenda": "Fazenda Santa Rita",
-    "talhao": "T-012",
+    "fazenda": "40002-ALTO PORTO REAL",
+    "talhao": "TH-22",
+    "talhao_fid": 1,
     "bloco": "B-03",
     "amostrador": "João Silva"
   },
   "pontos": [
     {
       "numero": 1,
-      "geolocalizacao": { "latitude": -21.1784, "longitude": -47.8102, "precisao_m": 4.5, "capturado_em": "2026-11-10T08:20:00-03:00" },
+      "geolocalizacao": {
+        "latitude": -21.1784,
+        "longitude": -47.8102,
+        "precisao_m": 4.5,
+        "capturado_em": "2026-11-10T08:20:00-03:00"
+      },
       "tocos_examinados": 10,
       "tocos_brocados": 2,
-      "migdolus": { "larva": 0, "pupa": 0, "adulto": 0 },
-      "sphenophorus_levis": { "larva": 3, "pupa": 0, "adulto": 1 },
-      "metamasius": { "larva": 0, "pupa": 0, "adulto": 0 },
-      "broca_da_cana": { "larva": 1, "pupa": 0, "adulto": 0 },
-      "pao_de_galinha": { "larva": 2, "pupa": 0, "adulto": 0 }
+      "migdolus": {
+        "larva": 0,
+        "pupa": 0,
+        "adulto": 0
+      },
+      "sphenophorus_levis": {
+        "larva": 3,
+        "pupa": 0,
+        "adulto": 1
+      },
+      "metamasius": {
+        "larva": 0,
+        "pupa": 0,
+        "adulto": 0
+      },
+      "broca_da_cana": {
+        "larva": 1,
+        "pupa": 0,
+        "adulto": 0
+      },
+      "pao_de_galinha": {
+        "larva": 2,
+        "pupa": 0,
+        "adulto": 0
+      }
     },
     {
       "numero": 2,
-      "geolocalizacao": { "latitude": -21.1791, "longitude": -47.8115, "precisao_m": 3.8, "capturado_em": "2026-11-10T08:41:00-03:00" },
+      "geolocalizacao": {
+        "latitude": -21.1791,
+        "longitude": -47.8115,
+        "precisao_m": 3.8,
+        "capturado_em": "2026-11-10T08:41:00-03:00"
+      },
       "tocos_examinados": 10,
       "tocos_brocados": 1,
-      "migdolus": { "larva": 0, "pupa": 0, "adulto": 0 },
-      "sphenophorus_levis": { "larva": 0, "pupa": 0, "adulto": 0 },
-      "metamasius": { "larva": 1, "pupa": 0, "adulto": 0 },
-      "broca_da_cana": { "larva": 0, "pupa": 0, "adulto": 0 },
-      "pao_de_galinha": { "larva": 0, "pupa": 0, "adulto": 0 }
+      "migdolus": {
+        "larva": 0,
+        "pupa": 0,
+        "adulto": 0
+      },
+      "sphenophorus_levis": {
+        "larva": 0,
+        "pupa": 0,
+        "adulto": 0
+      },
+      "metamasius": {
+        "larva": 1,
+        "pupa": 0,
+        "adulto": 0
+      },
+      "broca_da_cana": {
+        "larva": 0,
+        "pupa": 0,
+        "adulto": 0
+      },
+      "pao_de_galinha": {
+        "larva": 0,
+        "pupa": 0,
+        "adulto": 0
+      }
     }
   ],
   "resultados": {
@@ -43,6 +94,8 @@
     "total_tocos_brocados": 3,
     "percentual_tocos_brocados": 15.0,
     "alerta_pragas_criticas": true,
-    "pragas_criticas_detectadas": ["sphenophorus_levis"]
+    "pragas_criticas_detectadas": [
+      "sphenophorus_levis"
+    ]
   }
 }

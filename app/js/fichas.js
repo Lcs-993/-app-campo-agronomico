@@ -38,8 +38,6 @@ export const FICHAS = {
     nomeItem: 'Ponto',
     identificacao: [
       { chave: 'data', rotulo: 'Data', tipo: 'data', obrigatorio: true },
-      { chave: 'fazenda', rotulo: 'Fazenda', obrigatorio: true, sugestoes: true },
-      { chave: 'talhao', rotulo: 'Talhão', obrigatorio: true, sugestoes: true },
       { chave: 'bloco', rotulo: 'Bloco', obrigatorio: true, sugestoes: true },
       { chave: 'amostrador', rotulo: 'Amostrador', obrigatorio: true, sugestoes: true },
     ],
@@ -97,8 +95,6 @@ export const FICHAS = {
     nomeItem: 'Ponto',
     identificacao: [
       { chave: 'data', rotulo: 'Data', tipo: 'data', obrigatorio: true },
-      { chave: 'fazenda', rotulo: 'Fazenda', obrigatorio: true, sugestoes: true },
-      { chave: 'talhao', rotulo: 'Talhão', obrigatorio: true, sugestoes: true },
       { chave: 'bloco', rotulo: 'Bloco', sugestoes: true },
       { chave: 'amostrador', rotulo: 'Amostrador', obrigatorio: true, sugestoes: true },
     ],
@@ -158,13 +154,9 @@ export const FICHAS = {
     nomeItem: 'Amostra',
     identificacao: [
       { chave: 'data', rotulo: 'Data', tipo: 'data', obrigatorio: true },
-      { chave: 'fazenda', rotulo: 'Fazenda', obrigatorio: true, sugestoes: true },
-      { chave: 'talhao', rotulo: 'Talhão', obrigatorio: true, sugestoes: true },
       { chave: 'amostrador', rotulo: 'Auditor', sugestoes: true },
     ],
-    camposFicha: [
-      { chave: 'area_ha', rotulo: 'Área do talhão', tipo: 'decimal', obrigatorio: true, sufixo: 'ha', positivo: true },
-    ],
+    usaAreaDoTalhao: true,
     camposItem: [
       { chave: 'geolocalizacao', rotulo: 'Localização da amostra', tipo: 'gps', obrigatorio: true },
       { chave: 'entrenos_totais', rotulo: 'Entrenós totais', tipo: 'inteiro', obrigatorio: true, min: 1 },
@@ -240,7 +232,7 @@ export function novoRegistro(tipo, dispositivoId) {
     [cfg.colecao]: [cfg.novoItem(1)],
     observacoes: '',
   };
-  for (const c of cfg.camposFicha ?? []) ficha[c.chave] = null;
+  if (cfg.usaAreaDoTalhao) ficha.area_ha = null;
   return { id: ficha.metadados.id, tipo, finalizada: false, ficha };
 }
 
@@ -256,6 +248,33 @@ export function novoUuid() {
   b[8] = (b[8] & 0x3f) | 0x80;
   const x = [...b].map((v) => v.toString(16).padStart(2, '0')).join('');
   return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
+}
+
+// ---------- Talhão ----------
+
+/** Copia para a ficha o talhão identificado pelo GPS (dados vindos do WebGIS). */
+export function definirTalhao(ficha, talhao, geo) {
+  ficha.identificacao.fazenda = talhao.fazenda;
+  ficha.identificacao.talhao = talhao.talhao;
+  ficha.identificacao.talhao_fid = talhao.fid;
+  ficha.talhao_info = {
+    variedade: talhao.variedade, area_ha: talhao.area_ha, identificado_em: new Date().toISOString(),
+    geolocalizacao: geo ?? null,
+  };
+  if ('area_ha' in ficha) ficha.area_ha = talhao.area_ha;
+}
+
+/** Erros de um ponto cuja localização não é do talhão da ficha. */
+export function errosTalhaoItem(ficha, item) {
+  if (!item.geolocalizacao || ficha.identificacao.talhao_fid == null) return [];
+  const tp = item.talhao_ponto;
+  if (!tp) return ['não foi possível conferir o talhão deste ponto (talhões não baixados). Capture o GPS de novo.'];
+  if (tp.fid === ficha.identificacao.talhao_fid) return [];
+  if (tp.fid == null) {
+    const perto = tp.mais_proximo ? ` O mais próximo é ${tp.mais_proximo}, a ${tp.distancia_m} m.` : '';
+    return [`a localização está fora dos talhões cadastrados no WebGIS.${perto}`];
+  }
+  return [`a localização fica no talhão ${tp.nome}, não no talhão desta ficha.`];
 }
 
 // ---------- Validação antes de finalizar ----------
@@ -286,12 +305,9 @@ export function pendencias(registro, parametros) {
   const cfg = FICHAS[registro.tipo];
   const f = registro.ficha;
   const erros = [];
+  if (f.identificacao.talhao_fid == null) erros.push('Talhão: identifique o talhão pelo GPS');
   for (const c of cfg.identificacao) {
     if (c.obrigatorio && vazio(f.identificacao[c.chave])) erros.push(`${c.rotulo}: campo obrigatório`);
-  }
-  for (const c of cfg.camposFicha ?? []) {
-    const e = erroCampo(c, f[c.chave]);
-    if (e) erros.push(`${c.rotulo}: ${e}`);
   }
   const itens = f[cfg.colecao];
   if (!itens.length) erros.push(`Adicione pelo menos um(a) ${cfg.nomeItem.toLowerCase()}.`);
@@ -301,7 +317,7 @@ export function pendencias(registro, parametros) {
       const e = erroCampo(c, item[c.chave]);
       if (e) erros.push(`${prefixo} · ${c.rotulo}: ${e}`);
     }
-    for (const e of cfg.errosItem(item)) erros.push(`${prefixo}: ${e}`);
+    for (const e of [...cfg.errosItem(item), ...errosTalhaoItem(f, item)]) erros.push(`${prefixo}: ${e}`);
   }
   erros.push(...(cfg.errosFicha?.(f, parametros) ?? []));
   return erros;
@@ -329,7 +345,12 @@ function limparItem(cfg, item) {
 export function documentoFinal(registro, parametros) {
   const cfg = FICHAS[registro.tipo];
   const f = registro.ficha;
-  const identificacao = {};
+  const identificacao = {
+    data: f.identificacao.data,
+    fazenda: f.identificacao.fazenda,
+    talhao: f.identificacao.talhao,
+    talhao_fid: f.identificacao.talhao_fid,
+  };
   for (const c of cfg.identificacao) if (!vazio(f.identificacao[c.chave])) identificacao[c.chave] = f.identificacao[c.chave].trim();
 
   const doc = {
@@ -337,7 +358,7 @@ export function documentoFinal(registro, parametros) {
     metadados: { ...f.metadados },
     identificacao,
   };
-  for (const c of cfg.camposFicha ?? []) doc[c.chave] = f[c.chave];
+  if (cfg.usaAreaDoTalhao) doc.area_ha = f.area_ha;
   doc[cfg.colecao] = f[cfg.colecao].map((item) => limparItem(cfg, item));
 
   const resultados = { ...cfg.calcular(f, parametros) };

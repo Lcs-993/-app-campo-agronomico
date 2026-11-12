@@ -19,19 +19,21 @@ scripts/   Validador das fichas (schema + regras de negócio)
 tests/     Testes do validador e teste de ponta a ponta do app
 ```
 
-## Aplicativo de campo
+## Aplicativo de campo (WebGIS Campo)
 
-Aplicativo web instalável (PWA) que funciona sem internet. Roda no navegador de qualquer celular ou tablet e pode ser adicionado à tela inicial. Não precisa de compilação: são arquivos HTML, CSS e JavaScript puros.
+Aplicativo web instalável (PWA) que funciona sem internet, com o mesmo visual do [WebGIS](https://github.com/Lcs-993/web_gis): tema escuro por padrão (o claro pode ser escolhido e vale para os dois), verde Bambuí e a marca do WebGIS. Não precisa de compilação: são arquivos HTML, CSS e JavaScript puros.
+
+**Talhão pela localização.** Fazenda e talhão não são digitados: o app usa a camada `pol_talhoes.geojson` do WebGIS (publicada em `lcs-993.github.io/web_gis/geojson/`), guardada no aparelho para uso sem internet. O talhão da ficha é identificado pelo GPS (botão "Identificar talhão pelo GPS" ou o GPS do primeiro ponto), e cada ponto é conferido: ponto em outro talhão ou fora de qualquer talhão impede finalizar. Pontos a até 30 m da borda contam como do talhão, por causa do erro do GPS. A ficha guarda o `fid`, a fazenda e o talhão do WebGIS; na ficha de CQ, a área vem do atributo "Área (ha.)" (ou é calculada do polígono, se o atributo estiver vazio). Os talhões são atualizados sozinhos ao abrir o app com internet, ou pelo botão "Atualizar" da tela inicial.
 
 | Tela | O que faz |
 |---|---|
-| Início | Cria fichas novas, lista rascunhos e fichas finalizadas, exporta as finalizadas em JSON |
-| Pragas do Solo | Contagem por toco e por estágio; alerta imediato (com vibração) para *Migdolus* e *Sphenophorus levis*; % de tocos brocados ao vivo |
-| Cigarrinha-da-Raiz | Metros, ninfas, adultos e espuma; ninfas/m comparado ao NDE; fase predominante |
-| Infestação Final da Broca | Entrenós totais e danificados, fotos com GPS; II ao vivo; liberação, alerta ou bloqueio de corte; parecer do PDA quando bloqueado |
-| Parâmetros do PDA | Limites vigentes (NDE, % de alerta e de bloqueio, pragas críticas) |
+| Início | Situação dos talhões do WebGIS, fichas novas, rascunhos, fichas finalizadas e exportação em JSON |
+| Pragas do Solo | Talhão pelo GPS; contagem por toco e por estágio; alerta imediato (com vibração) para *Migdolus* e *Sphenophorus levis*; % de tocos brocados ao vivo |
+| Cigarrinha-da-Raiz | Talhão pelo GPS; metros, ninfas, adultos e espuma; ninfas/m comparado ao NDE; fase predominante |
+| Infestação Final da Broca | Talhão e área pelo GPS; entrenós totais e danificados, fotos com GPS; II ao vivo; liberação, alerta ou bloqueio de corte; parecer do PDA quando bloqueado |
+| Parâmetros do PDA | Limites vigentes e origem dos talhões |
 
-Cada ponto ou amostra captura o GPS do aparelho. As fichas são salvas automaticamente no aparelho (IndexedDB) enquanto são preenchidas. Uma ficha só é finalizada quando passa em todas as regras dos schemas; o JSON gerado segue `schemas/`.
+As fichas são salvas automaticamente no aparelho (IndexedDB) enquanto são preenchidas. Uma ficha só é finalizada quando passa em todas as regras dos schemas; o JSON gerado segue `schemas/`.
 
 Para rodar no computador:
 
@@ -39,7 +41,7 @@ Para rodar no computador:
 python3 -m http.server 8000 -d app
 ```
 
-e abra http://localhost:8000. GPS, câmera e modo offline só funcionam em `localhost` ou em HTTPS.
+e abra http://localhost:8000. GPS, câmera e modo offline só funcionam em `localhost` ou em HTTPS. Localmente, os talhões só carregam se a pasta do WebGIS estiver ao lado, como no GitHub Pages (por exemplo, servindo uma pasta com `app` como `-app-campo-agronomico/` e o repositório `web_gis/`); o teste `tests/e2e_app.js` monta isso sozinho com a fixture `tests/fixtures/pol_talhoes.geojson`.
 
 ### Publicação (GitHub Pages)
 
@@ -51,7 +53,7 @@ Para instalar no celular: abra o endereço no Chrome (Android) ou Safari (iPhone
 
 Configuração (uma única vez): em Settings → Pages, escolher **Source: GitHub Actions**.
 
-**Ainda não existe:** servidor de sincronização (as fichas ficam no aparelho e saem pelo botão de exportar), login e perfis (qualquer pessoa com o aparelho pode registrar o parecer do PDA) e cadastro de fazendas e talhões (os nomes são digitados, com sugestão dos já usados).
+**Ainda não existe:** servidor de sincronização (as fichas ficam no aparelho e saem pelo botão de exportar), login e perfis (qualquer pessoa com o aparelho pode registrar o parecer do PDA) e mapa com imagem de satélite (o app mostra só o contorno do talhão e os pontos). O bloco continua digitado, porque a camada de talhões do WebGIS não tem esse atributo.
 
 ## Validar as fichas
 

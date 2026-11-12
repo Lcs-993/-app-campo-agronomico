@@ -2,22 +2,27 @@
   "tipo_ficha": "cq_infestacao_final_broca",
   "metadados": {
     "id": "c7e9f1a2-3b4d-4f6e-9a8b-0c1d2e3f4a5b",
-    "versao_schema": "1.0.0",
+    "versao_schema": "1.1.0",
     "criado_em": "2026-11-12T09:00:00-03:00",
     "dispositivo_id": "tablet-cq-01",
     "status_sincronizacao": "pendente"
   },
   "identificacao": {
     "data": "2026-11-12",
-    "fazenda": "Fazenda Boa Vista",
-    "talhao": "T-004",
+    "fazenda": "40002-ALTO PORTO REAL",
+    "talhao": "TH-8",
+    "talhao_fid": 3,
     "amostrador": "Carlos Pereira"
   },
   "area_ha": 18.6,
   "amostras": [
     {
       "numero": 1,
-      "geolocalizacao": { "latitude": -21.2010, "longitude": -47.7905, "capturado_em": "2026-11-12T09:10:00-03:00" },
+      "geolocalizacao": {
+        "latitude": -21.201,
+        "longitude": -47.7905,
+        "capturado_em": "2026-11-12T09:10:00-03:00"
+      },
       "entrenos_totais": 120,
       "entrenos_danificados": 6,
       "fotos": [
@@ -26,13 +31,21 @@
           "arquivo": "fotos/cq-T004-a1-01.jpg",
           "legenda": "Entrenó brocado com podridão vermelha",
           "capturado_em": "2026-11-12T09:12:00-03:00",
-          "geolocalizacao": { "latitude": -21.2010, "longitude": -47.7905, "capturado_em": "2026-11-12T09:12:00-03:00" }
+          "geolocalizacao": {
+            "latitude": -21.201,
+            "longitude": -47.7905,
+            "capturado_em": "2026-11-12T09:12:00-03:00"
+          }
         }
       ]
     },
     {
       "numero": 2,
-      "geolocalizacao": { "latitude": -21.2018, "longitude": -47.7913, "capturado_em": "2026-11-12T09:25:00-03:00" },
+      "geolocalizacao": {
+        "latitude": -21.2018,
+        "longitude": -47.7913,
+        "capturado_em": "2026-11-12T09:25:00-03:00"
+      },
       "entrenos_totais": 130,
       "entrenos_danificados": 4
     }

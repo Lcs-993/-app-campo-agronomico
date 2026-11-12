@@ -2,6 +2,7 @@
 
 import { h, barraTopo, fmt, fmtData } from '../ui.js';
 import { carregarParametros } from '../db.js';
+import { URL_TALHOES } from '../talhoes.js';
 import { nomePraga } from '../regras.js';
 
 export async function telaParametros() {
@@ -19,6 +20,9 @@ export async function telaParametros() {
       h('section', { class: 'cartao' }, h('h2', null, 'Pragas do solo'),
         h('dl', { class: 'indicadores' },
           linha('Pragas críticas (alerta imediato)', p.pragas_solo.pragas_criticas.map(nomePraga).join(', ')))),
+      h('section', { class: 'cartao' }, h('h2', null, 'Talhões'),
+        h('p', { class: 'campo-dica' }, 'Camada pol_talhoes do WebGIS, baixada para uso sem internet:'),
+        h('p', { class: 'endereco' }, URL_TALHOES)),
       h('p', { class: 'nota' }, 'Os parâmetros são definidos pelo Planejamento Agronômico e atualizados na sincronização.'),
     ),
   );
