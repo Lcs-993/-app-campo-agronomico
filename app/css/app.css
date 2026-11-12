@@ -413,7 +413,7 @@ textarea.entrada { resize: vertical; min-height: 64px; }
 .chip-info { background: var(--info-soft); color: var(--info-text); }
 
 /* ---------- 8. Tela inicial ---------- */
-.cartao-talhoes { flex-direction: row; align-items: center; gap: 12px; padding: 12px 14px; }
+.cartao-talhoes, .cartao-servidor { flex-direction: row; align-items: center; gap: 12px; padding: 12px 14px; }
 .cartao-talhoes-pendente { border-color: var(--warning); background: var(--warning-soft); }
 .talhoes-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; font-size: 13px; color: var(--text-muted); }
 .talhoes-texto strong { color: var(--text); font-size: 15px; }
@@ -473,3 +473,4 @@ textarea.entrada { resize: vertical; min-height: 64px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; }
 }
+.alerta ul { margin: 6px 0; padding-left: 18px; font-size: 14px; color: var(--text); }

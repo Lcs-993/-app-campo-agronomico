@@ -60,6 +60,7 @@ const ICONES = {
   ajustes: '<path d="M4 7 H13 M17 7 H20 M4 17 H7 M11 17 H20"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
   lapis: '<path d="M4.5 19.5 L5.3 15.7 L15.4 5.6 a1.9 1.9 0 0 1 2.7 0 l.3 .3 a1.9 1.9 0 0 1 0 2.7 L8.3 18.7 Z"/><path d="M13.6 7.4 L16.6 10.4"/>',
   info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11 V16.5 M12 7.9 V8"/>',
+  enviar: '<path d="M12 15 V5 M8 9 L12 5 L16 9"/><path d="M5 15.5 V19 a1 1 0 0 0 1 1 H18 a1 1 0 0 0 1 -1 V15.5"/>',
   atualizar: '<path d="M19 12 a7 7 0 1 1 -2.05 -4.95"/><path d="M19.5 4.5 V8.5 H15.5"/>',
   'tema-claro': '<circle cx="12" cy="12" r="3.8"/><path d="M12 3.5 V5.5 M12 18.5 V20.5 M3.5 12 H5.5 M18.5 12 H20.5 M6 6 L7.4 7.4 M16.6 16.6 L18 18 M6 18 L7.4 16.6 M16.6 7.4 L18 6"/>',
   'tema-escuro': '<path d="M19.5 14.6 A7.8 7.8 0 1 1 9.4 4.5 A6.2 6.2 0 0 0 19.5 14.6 Z"/>',

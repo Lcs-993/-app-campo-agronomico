@@ -5,6 +5,8 @@ import { FICHAS } from '../fichas.js';
 import { listarFichas, carregarParametros, idDispositivo } from '../db.js';
 import { carregarTalhoes, atualizarTalhoes } from '../talhoes.js';
 import { carregarTerracos, atualizarTerracos } from '../terracos.js';
+import { configServidor, sincronizar, textoResumo, aguardandoEnvio, enviada } from '../sync.js';
+import { navegar } from '../rotas.js';
 
 /** Situação dos talhões do WebGIS no aparelho, com botão para atualizar. */
 function cartaoTalhoes() {
@@ -53,6 +55,47 @@ function cartaoTalhoes() {
   return cartao;
 }
 
+// O envio automático acontece uma vez por abertura do app (depois, só pelo botão).
+let envioAutomaticoFeito = false;
+
+/** Envio das fichas finalizadas ao servidor. Tenta sozinho ao abrir o app com internet. */
+function cartaoServidor(pendentes) {
+  const { url } = configServidor();
+  const texto = h('div', { class: 'talhoes-texto' });
+  const cartao = h('section', { class: 'cartao cartao-servidor' }, h('span', { class: 'linha-icone' }, icone('enviar', 22)), texto);
+  if (!url) {
+    texto.append(h('strong', null, 'Servidor não configurado'),
+      h('span', null, 'Configure para enviar as fichas finalizadas ao WebGIS. Até lá, use a exportação em JSON.'));
+    cartao.append(h('a', { href: '#/servidor', class: 'btn btn-secundario btn-pequeno' }, icone('ajustes', 18), 'Configurar'));
+    return cartao;
+  }
+  const n = pendentes.length;
+  const botao = h('button', { type: 'button', class: 'btn btn-secundario btn-pequeno', disabled: !n }, icone('enviar', 18), 'Enviar');
+  texto.append(h('strong', null, n ? `${n} ficha${n === 1 ? '' : 's'} aguardando envio` : 'Tudo enviado ao servidor'),
+    h('span', null, h('a', { href: '#/servidor' }, new URL(url).host)));
+  cartao.append(botao);
+
+  let enviando = false;
+  async function enviar(silencioso) {
+    if (enviando) return;
+    enviando = true;
+    botao.disabled = true;
+    texto.lastChild.textContent = 'Enviando…';
+    const r = await sincronizar();
+    enviando = false;
+    if (!silencioso || r.enviadas || r.recusadas || r.comFotosPendentes) {
+      aviso(textoResumo(r), r.erro || r.recusadas ? 'atencao' : 'ok');
+    }
+    if (location.hash === '' || location.hash === '#/') navegar('#/', { recarregar: true });
+  }
+  botao.addEventListener('click', () => enviar(false));
+  if (n && navigator.onLine && !envioAutomaticoFeito) {
+    envioAutomaticoFeito = true;
+    setTimeout(() => enviar(true), 0);
+  }
+  return cartao;
+}
+
 function cartaoNovaFicha(tipo, cfg) {
   return h('a', { href: `#/nova/${tipo}`, class: `cartao-nova cartao-nova-${cfg.icone}` },
     h('span', { class: 'cartao-nova-icone' }, icone(cfg.icone, 30)),
@@ -62,6 +105,16 @@ function cartaoNovaFicha(tipo, cfg) {
       h('span', { class: 'cartao-nova-desc' }, cfg.descricao)),
     h('span', { class: 'cartao-nova-mais' }, icone('mais', 22)),
   );
+}
+
+function chipEnvio(registro) {
+  if (!registro.finalizada) return chip('Rascunho');
+  switch (registro.envio?.situacao) {
+    case 'enviada': return chip('Enviada', 'ok');
+    case 'fotos_pendentes': return chip('Fotos por enviar', 'atencao');
+    case 'erro': return chip('Recusada pelo servidor', 'perigo');
+    default: return chip('Aguardando envio', 'info');
+  }
 }
 
 function linhaFicha(registro, parametros) {
@@ -79,7 +132,7 @@ function linhaFicha(registro, parametros) {
         h('span', { class: 'linha-meta' },
           `${fmtData(id.data)} · ${itens} ${cfg.nomeItem.toLowerCase()}${itens === 1 ? '' : 's'}`),
         h('span', { class: 'linha-chips' },
-          registro.finalizada ? chip('Aguardando envio', 'info') : chip('Rascunho'),
+          chipEnvio(registro),
           cfg.resumoLista(f, parametros).map((r) => chip(r.texto, r.nivel)))),
     ),
   );
@@ -100,6 +153,9 @@ export async function telaInicio() {
   registros.sort((a, b) => (b.salvo_em ?? '').localeCompare(a.salvo_em ?? ''));
   const finalizadas = registros.filter((r) => r.finalizada);
   const rascunhos = registros.filter((r) => !r.finalizada);
+  const pendentes = registros.filter(aguardandoEnvio);
+  const enviadas = registros.filter(enviada);
+  const ENVIADAS_NA_LISTA = 20;
 
   function exportar() {
     if (!finalizadas.length) return aviso('Nenhuma ficha finalizada para exportar.', 'atencao');
@@ -128,14 +184,16 @@ export async function telaInicio() {
     }),
     h('main', { class: 'conteudo' },
       cartaoTalhoes(),
+      cartaoServidor(pendentes),
       h('section', null,
         h('h2', { class: 'titulo-secao' }, 'Nova ficha'),
         h('div', { class: 'grade-novas' }, Object.entries(FICHAS).map(([tipo, cfg]) => cartaoNovaFicha(tipo, cfg)))),
       lista('Em preenchimento', rascunhos, 'Nenhum rascunho. Escolha uma ficha acima para começar.'),
-      lista('Finalizadas, aguardando envio', finalizadas, 'Nenhuma ficha finalizada.'),
+      lista('Finalizadas, aguardando envio', pendentes, 'Nenhuma ficha aguardando envio.'),
+      enviadas.length ? lista('Enviadas', enviadas.slice(0, ENVIADAS_NA_LISTA), '') : null,
       h('button', { type: 'button', class: 'btn btn-secundario btn-largo', onclick: exportar, disabled: !finalizadas.length },
         icone('exportar', 20), 'Exportar fichas finalizadas (JSON)'),
-      h('p', { class: 'nota' }, 'Tudo fica salvo neste aparelho e funciona sem internet.'),
+      h('p', { class: 'nota' }, 'Tudo fica salvo neste aparelho e funciona sem internet. As fichas vão para o servidor quando houver conexão.'),
     ),
   );
 }
