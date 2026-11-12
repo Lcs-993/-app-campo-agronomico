@@ -15,6 +15,7 @@ import { carregarTerracos, atualizarTerracos, terracosNaCaixa } from '../terraco
 import { restricoesDoPonto, DISTANCIA_MINIMA_BORDA_M, DISTANCIA_MINIMA_TERRACO_M } from '../restricoes.js';
 import { calcularCQ } from '../regras.js';
 import { obterFicha, salvarFicha, excluirFicha, excluirFoto, listarFichas, idDispositivo, carregarParametros } from '../db.js';
+import { aceitaPeloServidor } from '../sync.js';
 import { navegar } from '../rotas.js';
 
 async function sugestoesIdentificacao() {
@@ -345,6 +346,7 @@ export async function telaFicha(id) {
   async function reabrir() {
     registro.finalizada = false;
     delete registro.documento;
+    delete registro.envio;
     await salvarFicha(registro);
     navegar(`#/ficha/${registro.id}`, { recarregar: true });
   }
@@ -358,7 +360,8 @@ export async function telaFicha(id) {
     navegar('#/');
   }
 
-  const rodape = somenteLeitura
+  const travadaPeloServidor = aceitaPeloServidor(registro);
+  const rodape = travadaPeloServidor ? null : somenteLeitura
     ? h('div', { class: 'rodape-acoes' },
       h('button', { type: 'button', class: 'btn btn-secundario', onclick: reabrir }, icone('lapis', 20), 'Reabrir para edição'))
     : h('div', { class: 'rodape-acoes' },
@@ -392,9 +395,36 @@ export async function telaFicha(id) {
       acoes: somenteLeitura ? chip('Finalizada', 'ok') : estadoSalvo,
     }),
     h('main', { class: 'conteudo' },
-      somenteLeitura ? h('p', { class: 'nota' }, 'Ficha finalizada, aguardando sincronização. Para alterar, reabra para edição.') : null,
+      somenteLeitura ? situacaoEnvio(registro) : null,
       formulario, painelPendencias, rodape),
   );
+}
+
+/** Situação da ficha finalizada em relação ao servidor. */
+function situacaoEnvio(registro) {
+  const e = registro.envio;
+  const quando = e?.em ? ` em ${fmtData(e.em)} às ${fmtHora(new Date(e.em))}` : '';
+  const lista = (itens) => (itens?.length ? h('ul', null, itens.map((t) => h('li', null, t))) : null);
+  if (e?.situacao === 'enviada') {
+    return h('div', { class: 'alerta alerta-ok', role: 'status' }, icone('ok', 26),
+      h('div', null, h('strong', null, `Enviada ao servidor${quando}`),
+        h('p', null, 'A ficha já está no WebGIS e não pode mais ser alterada.'),
+        e.avisos?.length ? [h('p', null, 'Avisos do servidor:'), lista(e.avisos)] : null));
+  }
+  if (e?.situacao === 'fotos_pendentes') {
+    return h('div', { class: 'alerta alerta-atencao', role: 'status' }, icone('alerta', 26),
+      h('div', null, h('strong', null, `Ficha recebida pelo servidor${quando}`),
+        h('p', null, `Falta enviar ${e.fotos_pendentes.length} foto(s). Elas vão na próxima sincronização.`)));
+  }
+  if (e?.situacao === 'erro') {
+    return h('div', { class: 'alerta alerta-perigo', role: 'alert' }, icone('alerta', 26),
+      h('div', null, h('strong', null, `Recusada pelo servidor${quando}`),
+        lista(e.erros),
+        h('p', null, e.motivo === 'conflito'
+          ? 'O servidor já tem uma versão diferente desta ficha. Fale com o administrador.'
+          : 'Reabra para edição, corrija e finalize de novo.')));
+  }
+  return h('p', { class: 'nota' }, 'Ficha finalizada, aguardando envio ao servidor. Para alterar, reabra para edição.');
 }
 
 // ---------- mini mapa do talhão (SVG, funciona sem internet) ----------

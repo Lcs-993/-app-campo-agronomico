@@ -9,3 +9,7 @@ dist/
 .vscode/
 __pycache__/
 .venv/
+
+# Backend
+backend/.env
+backend/dados/

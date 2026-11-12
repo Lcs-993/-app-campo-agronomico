@@ -1,0 +1,47 @@
+# Testa o backend (API + PostGIS) e a imagem Docker a cada push e pull request que mexa nele.
+
+name: Backend
+
+on:
+  push:
+    branches: [main]
+    paths: ['backend/**', 'schemas/**', 'scripts/**', 'app/parametros-pda.json', 'docker-compose.yml', '.github/workflows/backend.yml']
+  pull_request:
+    paths: ['backend/**', 'schemas/**', 'scripts/**', 'app/parametros-pda.json', 'docker-compose.yml', '.github/workflows/backend.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    services:
+      banco:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: campo_teste
+          POSTGRES_USER: campo
+          POSTGRES_PASSWORD: campo
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U campo -d campo_teste"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependências
+        run: pip install -r backend/requirements.txt
+
+      - name: Testes da API
+        working-directory: backend
+        env:
+          TEST_DATABASE_URL: postgresql://campo:campo@localhost:5432/campo_teste
+        run: python -m unittest discover -s tests -v
+
+      - name: Construir a imagem Docker
+        run: docker build -f backend/Dockerfile -t campo-api .

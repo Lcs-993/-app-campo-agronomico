@@ -1,0 +1,47 @@
+# Backend para desenvolvimento e homologação: API + PostgreSQL/PostGIS.
+#
+#   cp backend/.env.exemplo backend/.env      (ajuste as chaves)
+#   docker compose up -d --build
+#   docker compose exec api python -m app.cli importar-talhoes https://lcs-993.github.io/web_gis/geojson/pol_talhoes.geojson
+#
+# API em http://localhost:8080 (documentação em /docs). Ver docs/backend.md.
+
+services:
+  banco:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: campo
+      POSTGRES_USER: campo
+      POSTGRES_PASSWORD: ${SENHA_BANCO:-campo}
+    volumes:
+      - banco:/var/lib/postgresql/data
+      - ./backend/sql/criar_banco_teste.sql:/docker-entrypoint-initdb.d/criar_banco_teste.sql:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campo -d campo"]
+      interval: 5s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - path: backend/.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://campo:${SENHA_BANCO:-campo}@banco:5432/campo
+      PASTA_FOTOS: /dados/fotos
+    volumes:
+      - fotos:/dados/fotos
+    ports:
+      - "8080:8080"
+    depends_on:
+      banco:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  banco:
+  fotos:

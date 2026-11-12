@@ -1,5 +1,6 @@
 // Teste de ponta a ponta do app: preenche as três fichas num celular simulado,
-// finaliza, exporta o JSON e valida o arquivo com scripts/validar_fichas.py.
+// finaliza, exporta o JSON e valida o arquivo com scripts/validar_fichas.py, e envia
+// as fichas a um servidor simulado (mesmo contrato da API de backend/).
 //
 // Os talhões vêm de tests/fixtures/pol_talhoes.geojson (mesmo formato do WebGIS),
 // servido em /web_gis/geojson/, como no GitHub Pages, assim como os terraços de
@@ -277,6 +278,87 @@ async function exportarEValidar(page) {
   await page.getByText('Nova ficha').waitFor();
 }
 
+/** Servidor simulado (mesmas respostas do backend/): aceita pragas do solo e CQ, recusa a cigarrinha. */
+function simularServidor(contexto) {
+  const recebido = { lotes: [], fotos: [] };
+  const CORS = {
+    'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, PUT',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+  };
+  const json = (route, status, corpo) => route.fulfill({ status, headers: CORS, contentType: 'application/json', body: JSON.stringify(corpo) });
+  contexto.route('https://servidor.teste/**', async (route) => {
+    const req = route.request();
+    const caminho = new URL(req.url()).pathname;
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS });
+    if (caminho === '/api/v1/saude') return json(route, 200, { ok: true });
+    if (req.headers().authorization !== 'Bearer chave-e2e') return json(route, 401, { detail: 'Chave inválida' });
+    if (caminho === '/api/v1/aparelho') return json(route, 200, { ok: true, aparelho: 'tablet-e2e' });
+    if (caminho === '/api/v1/sync/fichas') {
+      const lote = req.postDataJSON();
+      recebido.lotes.push(lote);
+      const resultados = lote.fichas.map((f) => {
+        const id = f.metadados.id;
+        if (f.tipo_ficha === 'cigarrinha_raiz') return { id, situacao: 'invalida', erros: ['erro simulado pelo teste'], avisos: [], fotos_pendentes: [] };
+        const fotos = (f.amostras ?? []).flatMap((a) => (a.fotos ?? []).map((ft) => ft.id))
+          .filter((idFoto) => !recebido.fotos.some((r) => r.id === idFoto));
+        return { id, situacao: 'gravada', erros: [], avisos: [], fotos_pendentes: fotos };
+      });
+      return json(route, 200, { resultados });
+    }
+    if (req.method() === 'PUT' && caminho.startsWith('/api/v1/fotos/')) {
+      recebido.fotos.push({ id: caminho.split('/').pop(), tipo: req.headers()['content-type'], bytes: req.postDataBuffer()?.length });
+      return json(route, 200, { recebida: true });
+    }
+    return json(route, 404, { detail: 'não encontrado' });
+  });
+  return recebido;
+}
+
+async function testarEnvio(page, contexto) {
+  console.log('Envio ao servidor');
+  const recebido = simularServidor(contexto);
+  const cartao = page.locator('.cartao-servidor');
+  afirmar(await cartao.getByText('Servidor não configurado').isVisible(), 'avisa que o servidor não está configurado');
+  await cartao.getByRole('link', { name: 'Configurar' }).click();
+  await campo(page, 'Endereço do servidor').fill('https://servidor.teste/');
+  await campo(page, 'Chave do aparelho').fill('chave-errada');
+  await page.getByRole('button', { name: 'Testar conexão' }).click();
+  await page.getByText('a chave do aparelho foi recusada').waitFor();
+  afirmar(true, 'testar conexão acusa chave errada');
+  await campo(page, 'Chave do aparelho').fill('chave-e2e');
+  await page.getByRole('button', { name: 'Testar conexão' }).click();
+  await page.getByText('Conectado como "tablet-e2e".').waitFor();
+  afirmar(true, 'testar conexão confirma a chave certa');
+  await page.getByRole('button', { name: 'Salvar' }).click();
+
+  // Ao voltar para o início com internet, o envio começa sozinho.
+  await page.locator('.lista-fichas .chip', { hasText: 'Recusada pelo servidor' }).waitFor();
+  afirmar(recebido.lotes.length === 1 && recebido.lotes[0].fichas.length === 3, 'envia as 3 fichas finalizadas num lote');
+  afirmar(recebido.fotos.length === 1 && recebido.fotos[0].tipo === 'image/png' && recebido.fotos[0].bytes === FOTO.length,
+    'envia a foto do CQ pedida pelo servidor');
+  afirmar(await page.locator('.lista-fichas .chip', { hasText: /^Enviada$/ }).count() === 2, 'duas fichas marcadas como enviadas');
+  afirmar((await cartao.textContent()).includes('1 ficha aguardando envio'), 'a recusada continua aguardando envio');
+  await page.screenshot({ path: path.join(SAIDA, 'inicio-enviado.png'), fullPage: true });
+
+  await page.getByRole('link', { name: /Infestação Final da Broca/ }).last().click();
+  await page.getByText(/^Enviada ao servidor em/).waitFor();
+  afirmar(await page.getByRole('button', { name: 'Reabrir para edição' }).count() === 0, 'ficha enviada não pode ser reaberta');
+  await page.getByRole('link', { name: 'Voltar' }).click();
+
+  await page.getByRole('link', { name: /Cigarrinha-da-Raiz/ }).last().click();
+  await page.getByText('erro simulado pelo teste').waitFor();
+  afirmar(await page.getByRole('button', { name: 'Reabrir para edição' }).isVisible(), 'ficha recusada mostra o motivo e pode ser reaberta');
+  await page.getByRole('link', { name: 'Voltar' }).click();
+
+  await Promise.all([
+    page.waitForResponse((r) => r.url().endsWith('/api/v1/sync/fichas')),
+    cartao.getByRole('button', { name: 'Enviar' }).click(),
+  ]);
+  await page.locator('#aviso', { hasText: /^1 recusada pelo servidor\.$/ }).waitFor();
+  afirmar(recebido.lotes.length === 2 && recebido.lotes[1].fichas.length === 1, 'reenvio manda só a ficha que faltava');
+  afirmar(recebido.fotos.length === 1, 'não reenvia foto já recebida');
+}
+
 async function testarOffline(page, contexto) {
   console.log('Sem internet');
   await contexto.setOffline(true);
@@ -318,6 +400,7 @@ async function main() {
     await testarCQ(page, contexto);
     await testarTelaGps(page, contexto);
     await exportarEValidar(page);
+    await testarEnvio(page, contexto);
     await testarOffline(page, contexto);
     afirmar(errosConsole.length === 0, `sem erros de JavaScript ${errosConsole.join(' | ')}`);
   } finally {

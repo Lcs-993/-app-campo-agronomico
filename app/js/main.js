@@ -4,6 +4,7 @@ import { telaInicio } from './telas/inicio.js';
 import { telaFicha, telaNovaFicha } from './telas/ficha.js';
 import { telaParametros } from './telas/parametros.js';
 import { telaGps } from './telas/gps.js';
+import { telaServidor } from './telas/servidor.js';
 
 const raiz = document.getElementById('app');
 let geracao = 0;
@@ -17,6 +18,7 @@ async function desenhar() {
     else if (rota === 'ficha') tela = await telaFicha(arg);
     else if (rota === 'parametros') tela = await telaParametros();
     else if (rota === 'gps') tela = await telaGps();
+    else if (rota === 'servidor') tela = await telaServidor();
     else tela = await telaInicio();
   } catch (erro) {
     console.error(erro);
