@@ -4,6 +4,7 @@ import { h, icone, barraTopo, botaoTema, chip, fmtData, fmtHora, aviso } from '.
 import { FICHAS } from '../fichas.js';
 import { listarFichas, carregarParametros, idDispositivo } from '../db.js';
 import { carregarTalhoes, atualizarTalhoes } from '../talhoes.js';
+import { carregarTerracos, atualizarTerracos } from '../terracos.js';
 
 /** Situação dos talhões do WebGIS no aparelho, com botão para atualizar. */
 function cartaoTalhoes() {
@@ -21,21 +22,29 @@ function cartaoTalhoes() {
       return;
     }
     const quando = new Date(t.baixado_em);
-    texto.replaceChildren(h('strong', null, `${t.talhoes.length.toLocaleString('pt-BR')} talhões do WebGIS`),
+    const terracos = await carregarTerracos();
+    const n = terracos?.terracos.length;
+    const qtdTerracos = terracos ? ` · ${n.toLocaleString('pt-BR')} terraço${n === 1 ? '' : 's'}` : '';
+    texto.replaceChildren(h('strong', null, `${t.talhoes.length.toLocaleString('pt-BR')} talhões${qtdTerracos} do WebGIS`),
       h('span', null, mensagem ?? `Atualizados em ${fmtData(t.baixado_em)} às ${fmtHora(quando)}. Funcionam sem internet.`));
   }
 
   async function atualizar(silencioso) {
     botao.disabled = true;
     if (!silencioso) texto.lastChild && (texto.lastChild.textContent = 'Buscando a versão mais nova no WebGIS…');
-    const r = await atualizarTalhoes();
+    // Os terraços são opcionais: se a camada ainda não existe no WebGIS, segue sem eles.
+    const [r, rt] = await Promise.all([atualizarTalhoes(), atualizarTerracos()]);
+    if (rt.erro) console.warn('Terraços:', rt.erro);
     botao.disabled = false;
     if (r.erro) {
       await desenhar(silencioso ? undefined : `${r.erro} Os talhões já baixados continuam valendo.`);
       if (!silencioso) aviso(r.erro, 'atencao');
     } else {
       await desenhar();
-      if (!silencioso) aviso(r.atualizado ? `Talhões atualizados: ${r.quantidade.toLocaleString('pt-BR')}.` : 'Os talhões já estão na versão mais nova.');
+      if (!silencioso) {
+        const novos = [r.atualizado && `${r.quantidade.toLocaleString('pt-BR')} talhões`, rt.atualizado && `${rt.quantidade.toLocaleString('pt-BR')} terraços`].filter(Boolean);
+        aviso(novos.length ? `Atualizados: ${novos.join(' e ')}.` : 'Os talhões já estão na versão mais nova.');
+      }
     }
   }
 
@@ -112,6 +121,7 @@ export async function telaInicio() {
     barraTopo({
       comMarca: true,
       acoes: [
+        h('a', { href: '#/gps', class: 'topo-botao', 'aria-label': 'Informações do GPS', title: 'Informações do GPS' }, icone('satelite', 18)),
         botaoTema(),
         h('a', { href: '#/parametros', class: 'topo-botao', 'aria-label': 'Parâmetros do PDA', title: 'Parâmetros do PDA' }, icone('ajustes', 18)),
       ],

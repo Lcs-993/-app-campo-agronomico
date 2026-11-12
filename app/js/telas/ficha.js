@@ -11,6 +11,8 @@ import {
 import {
   carregarTalhoes, atualizarTalhoes, localizarTalhao, talhaoDoPonto, talhaoPorFid,
 } from '../talhoes.js';
+import { carregarTerracos, atualizarTerracos, terracosNaCaixa } from '../terracos.js';
+import { restricoesDoPonto, DISTANCIA_MINIMA_BORDA_M, DISTANCIA_MINIMA_TERRACO_M } from '../restricoes.js';
 import { calcularCQ } from '../regras.js';
 import { obterFicha, salvarFicha, excluirFicha, excluirFoto, listarFichas, idDispositivo, carregarParametros } from '../db.js';
 import { navegar } from '../rotas.js';
@@ -36,6 +38,7 @@ export async function telaNovaFicha(tipo) {
 export async function telaFicha(id) {
   const [registro, parametros, sugestoes] = await Promise.all([obterFicha(id), carregarParametros(), sugestoesIdentificacao()]);
   let talhoes = await carregarTalhoes();
+  await carregarTerracos();
   if (!registro) {
     return h('div', { class: 'tela' }, barraTopo({ titulo: 'Ficha não encontrada', voltar: '#/' }),
       h('main', { class: 'conteudo' }, h('p', null, 'Esta ficha não existe mais neste aparelho.')));
@@ -44,10 +47,12 @@ export async function telaFicha(id) {
   const f = registro.ficha;
   const somenteLeitura = registro.finalizada;
 
-  // Pontos capturados antes de os talhões estarem no aparelho: confere agora.
+  // Confere de novo todos os pontos do rascunho: pega pontos capturados antes de os
+  // talhões estarem no aparelho, camadas atualizadas (talhões e terraços) e as
+  // restrições de coleta perto da borda e dos terraços.
   if (talhoes && !somenteLeitura) {
     for (const item of f[cfg.colecao]) {
-      if (item.geolocalizacao && !item.talhao_ponto) item.talhao_ponto = talhaoDoPonto(item.geolocalizacao);
+      if (item.geolocalizacao) item.talhao_ponto = talhaoDoPonto(item.geolocalizacao);
     }
   }
 
@@ -141,7 +146,7 @@ export async function telaFicha(id) {
   async function identificarTalhao(botao) {
     if (!talhoes) {
       statusTalhao.textContent = 'Baixando os talhões do WebGIS…';
-      const r = await atualizarTalhoes();
+      const [r] = await Promise.all([atualizarTalhoes(), atualizarTerracos()]);
       talhoes = await carregarTalhoes();
       if (!talhoes) {
         statusTalhao.textContent = `${r.erro ?? 'Não foi possível baixar os talhões.'} Conecte-se à internet e tente de novo.`;
@@ -151,9 +156,14 @@ export async function telaFicha(id) {
     }
     botao.disabled = true;
     statusTalhao.className = 'talhao-status';
-    statusTalhao.textContent = 'Obtendo a localização…';
+    statusTalhao.textContent = 'Obtendo a localização… Em aparelhos mais antigos pode levar até 1 minuto.';
     try {
-      const geo = await capturarGps();
+      const geo = await capturarGps(60000, {
+        alvo: 30,
+        aoProgresso: (g) => {
+          if (g.precisao_m != null) statusTalhao.textContent = `Sinal encontrado (±${fmt(g.precisao_m, 0)} m). Melhorando a precisão…`;
+        },
+      });
       const r = localizarTalhao(geo.longitude, geo.latitude);
       if (!r.talhao) {
         statusTalhao.className = 'talhao-status erro';
@@ -164,7 +174,11 @@ export async function telaFicha(id) {
       }
       definirTalhao(f, r.talhao, geo);
       for (const item of f[cfg.colecao]) if (item.geolocalizacao) item.talhao_ponto = talhaoDoPonto(item.geolocalizacao);
-      statusTalhao.textContent = r.dentro ? '' : `Você está a ${fmt(r.distancia_m, 0)} m da borda deste talhão.`;
+      const motivos = restricoesDoPonto(talhaoDoPonto(geo));
+      statusTalhao.className = motivos.length ? 'talhao-status atencao' : 'talhao-status';
+      statusTalhao.textContent = motivos.length
+        ? `Talhão identificado, mas não colete aqui: ${motivos.join(' ')}`
+        : '';
       mudou();
     } catch (err) {
       statusTalhao.className = 'talhao-status erro';
@@ -173,6 +187,10 @@ export async function telaFicha(id) {
       botao.disabled = false;
     }
   }
+
+  const regraColeta = h('p', { class: 'campo-dica regra-coleta' }, icone('info', 16),
+    `Colete só dentro do talhão, a pelo menos ${DISTANCIA_MINIMA_BORDA_M} m da borda e ${DISTANCIA_MINIMA_TERRACO_M} m dos terraços.`);
+  const linkGps = h('a', { href: '#/gps', class: 'link-gps' }, icone('satelite', 16), 'Informações do GPS');
 
   desenharTalhao = () => {
     const id = f.identificacao;
@@ -185,7 +203,9 @@ export async function telaFicha(id) {
         h('p', { class: 'campo-dica' }, talhoes
           ? `Fazenda e talhão vêm da sua localização, pelos ${talhoes.talhoes.length.toLocaleString('pt-BR')} talhões do WebGIS. Fique dentro do talhão e toque no botão, ou capture o GPS do primeiro ponto.`
           : 'Os talhões do WebGIS ainda não foram baixados neste aparelho. Com internet, o botão abaixo baixa e identifica o talhão.'),
-        somenteLeitura ? null : botao);
+        regraColeta,
+        somenteLeitura ? null : botao,
+        linkGps);
       return;
     }
     const info = f.talhao_info ?? {};
@@ -197,7 +217,9 @@ export async function telaFicha(id) {
         h('div', { class: 'talhao-dado talhao-dado-largo' }, h('dt', null, 'Variedade'), h('dd', null, info.variedade || '—')),
       ),
       talhao ? miniMapa(talhao, f[cfg.colecao], f) : null,
+      regraColeta,
       somenteLeitura ? null : botao,
+      linkGps,
     );
   };
 
@@ -406,6 +428,12 @@ function miniMapa(talhao, itens, ficha) {
   const d = talhao.poligonos.map((pol) => pol.map((anel) =>
     `M${anel.map(([x, y]) => `${px(x).toFixed(1)} ${py(y).toFixed(1)}`).join('L')}Z`).join('')).join('');
   el.append(svg('path', { d, class: 'mini-mapa-talhao', 'fill-rule': 'evenodd' }));
+  const terracos = terracosNaCaixa([minX, minY, maxX, maxY]);
+  if (terracos.length) {
+    const dt = terracos.flatMap((t) => t.linhas).filter((l) => l.length > 1)
+      .map((l) => `M${l.map(([x, y]) => `${px(x).toFixed(1)} ${py(y).toFixed(1)}`).join('L')}`).join('');
+    el.append(svg('path', { d: dt, class: 'mini-mapa-terraco' }));
+  }
   for (const p of pontos) {
     const fora = errosTalhaoItem(ficha, p).length > 0;
     const g = svg('g', { class: `mini-mapa-ponto${fora ? ' fora' : ''}` });
@@ -416,8 +444,9 @@ function miniMapa(talhao, itens, ficha) {
     g.append(t);
     el.append(g);
   }
+  const legendaTerracos = terracos.length ? ' Linhas tracejadas: terraços.' : '';
   return h('figure', { class: 'mini-mapa-quadro' }, el,
-    h('figcaption', null, pontos.length
-      ? `Contorno do talhão no WebGIS e ${pontos.length} ponto${pontos.length > 1 ? 's' : ''} capturado${pontos.length > 1 ? 's' : ''}.`
-      : 'Contorno do talhão no WebGIS. Os pontos aparecem aqui ao capturar o GPS.'));
+    h('figcaption', null, (pontos.length
+      ? `Contorno do talhão no WebGIS e ${pontos.length} ponto${pontos.length > 1 ? 's' : ''} capturado${pontos.length > 1 ? 's' : ''}. Em vermelho, pontos com problema de localização.`
+      : 'Contorno do talhão no WebGIS. Os pontos aparecem aqui ao capturar o GPS.') + legendaTerracos));
 }

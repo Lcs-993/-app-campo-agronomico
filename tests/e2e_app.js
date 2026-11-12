@@ -2,7 +2,9 @@
 // finaliza, exporta o JSON e valida o arquivo com scripts/validar_fichas.py.
 //
 // Os talhões vêm de tests/fixtures/pol_talhoes.geojson (mesmo formato do WebGIS),
-// servido em /web_gis/geojson/, como no GitHub Pages.
+// servido em /web_gis/geojson/, como no GitHub Pages, assim como os terraços de
+// tests/fixtures/lin_terracos.geojson (um terraço atravessa o TH-1 em lat −21,1790
+// e outro passa pelo TH-2 em lat −21,1795).
 //
 // Uso: node tests/e2e_app.js [pasta-de-saida]
 // Requer Playwright com Chromium e Python com as dependências de requirements.txt.
@@ -15,6 +17,8 @@ const os = require('os');
 
 const RAIZ = path.resolve(__dirname, '..');
 const SAIDA = path.resolve(process.argv[2] || fs.mkdtempSync(path.join(os.tmpdir(), 'e2e-campo-')));
+// No Windows o Python costuma ser "python"; defina PYTHON para trocar.
+const PYTHON = process.env.PYTHON || 'python3';
 const PORTA = 8800 + Math.floor(Math.random() * 100);
 const URL_APP = `http://localhost:${PORTA}/-app-campo-agronomico/`;
 
@@ -25,15 +29,19 @@ const LOCAL = {
   th2: { latitude: -21.1780, longitude: -47.8060, accuracy: 4 },
   th3: { latitude: -21.1820, longitude: -47.8100, accuracy: 4 },
   borda: { latitude: -21.1784, longitude: -47.81215, accuracy: 6 }, // ~15 m fora do TH-1
+  bordaDentro: { latitude: -21.1784, longitude: -47.81185, accuracy: 5 }, // ~15 m dentro do TH-1, na faixa proibida
+  terraco: { latitude: -21.1792, longitude: -47.8100, accuracy: 4 }, // TH-1, ~22 m do terraço, ~89 m da borda
   fora: { latitude: -21.2500, longitude: -47.7000, accuracy: 4 },
 };
 
 /** Monta o site como no GitHub Pages: o app e o WebGIS lado a lado no mesmo domínio. */
 function montarSite() {
   const raiz = fs.mkdtempSync(path.join(os.tmpdir(), 'site-campo-'));
-  fs.symlinkSync(path.join(RAIZ, 'app'), path.join(raiz, '-app-campo-agronomico'));
+  fs.symlinkSync(path.join(RAIZ, 'app'), path.join(raiz, '-app-campo-agronomico'), 'junction');
   fs.mkdirSync(path.join(raiz, 'web_gis', 'geojson'), { recursive: true });
-  fs.copyFileSync(path.join(RAIZ, 'tests', 'fixtures', 'pol_talhoes.geojson'), path.join(raiz, 'web_gis', 'geojson', 'pol_talhoes.geojson'));
+  for (const nome of ['pol_talhoes.geojson', 'lin_terracos.geojson']) {
+    fs.copyFileSync(path.join(RAIZ, 'tests', 'fixtures', nome), path.join(raiz, 'web_gis', 'geojson', nome));
+  }
   return raiz;
 }
 
@@ -88,6 +96,8 @@ async function testarPragasSolo(page, contexto) {
   afirmar((await talhao.textContent()).includes('9001-FAZENDA TESTE') && (await talhao.textContent()).includes('RB86-7515'),
     'mostra fazenda e variedade vindas do WebGIS');
   afirmar(await talhao.locator('.mini-mapa .mini-mapa-ponto').count() === 1, 'mini mapa mostra o ponto capturado');
+  afirmar(await talhao.locator('.mini-mapa .mini-mapa-terraco').count() === 1, 'mini mapa desenha os terraços do talhão');
+  afirmar(await p1.locator('.erros-item').isHidden(), 'ponto a mais de 30 m da borda e dos terraços é aceito');
 
   await campo(p1, 'Tocos examinados').fill('10');
   await campo(p1, 'Tocos brocados').fill('12');
@@ -113,7 +123,17 @@ async function testarPragasSolo(page, contexto) {
     'ponto em outro talhão é recusado');
   afirmar(await talhao.locator('.mini-mapa-ponto.fora').count() === 1, 'mini mapa marca o ponto fora do talhão');
   await capturar('borda', contexto, p2);
-  afirmar(await p2.locator('.erros-item').isHidden(), 'ponto a ~15 m da borda conta como do talhão (erro do GPS)');
+  afirmar(await p2.getByText(/a localização está fora do talhão, a 1\d m da borda\. Entre pelo menos 30 m no talhão/).isVisible(),
+    'ponto ~15 m fora da borda é recusado');
+  await capturar('bordaDentro', contexto, p2);
+  afirmar(await p2.getByText(/a localização está a 1\d m da borda do talhão\. Colete a pelo menos 30 m da borda/).isVisible(),
+    'ponto dentro do talhão, mas a ~15 m da borda, é recusado');
+  await capturar('terraco', contexto, p2);
+  afirmar(await p2.getByText(/a localização está a 2\d m de um terraço\. Colete a pelo menos 30 m dos terraços/).isVisible(),
+    'ponto a ~22 m de um terraço é recusado');
+  await page.getByRole('button', { name: 'Finalizar ficha' }).click();
+  afirmar(await page.locator('.pendencias').getByText(/Ponto 2: a localização está a 2\d m de um terraço/).isVisible(),
+    'ponto perto do terraço impede finalizar');
   await capturar('th1b', contexto, p2);
   await campo(p2, 'Tocos examinados').fill('10');
   await mais(p2, 'Tocos brocados');
@@ -206,6 +226,25 @@ async function testarCQ(page, contexto) {
   await page.getByText('Nova ficha').waitFor();
 }
 
+async function testarTelaGps(page, contexto) {
+  console.log('Informações do GPS');
+  await contexto.setGeolocation(LOCAL.th1);
+  await page.getByRole('link', { name: 'Informações do GPS' }).click();
+  await page.getByText('-21,178400, -47,810200').waitFor();
+  const local = page.locator('.cartao', { hasText: 'Local de coleta' });
+  afirmar(await local.getByText('Pode coletar aqui').isVisible(), 'mostra coordenadas e libera a coleta dentro do talhão');
+  afirmar((await page.locator('.indicador', { hasText: 'Precisão' }).first().textContent()).includes('±4,5 m'), 'mostra a precisão');
+  afirmar(await page.locator('.indicador', { hasText: 'Satélites' }).getByText('Não informado').isVisible(),
+    'explica que o navegador não informa os satélites');
+  await contexto.setGeolocation(LOCAL.terraco);
+  await local.getByText('Não colete aqui').waitFor();
+  afirmar(await local.getByText(/de um terraço/).isVisible(), 'avisa ao vivo quando entra na faixa do terraço');
+  await page.screenshot({ path: path.join(SAIDA, 'gps.png'), fullPage: true });
+  await page.getByRole('link', { name: 'Voltar' }).click();
+  await page.getByText('Nova ficha').waitFor();
+  await contexto.setGeolocation(LOCAL.th1);
+}
+
 async function exportarEValidar(page) {
   console.log('Exportação');
   await page.screenshot({ path: path.join(SAIDA, 'inicio.png'), fullPage: true });
@@ -217,7 +256,7 @@ async function exportarEValidar(page) {
   await download.saveAs(arquivo);
   const pacote = JSON.parse(fs.readFileSync(arquivo, 'utf-8'));
   afirmar(pacote.fichas.length === 3, 'exporta as 3 fichas finalizadas');
-  const saida = execFileSync('python3', [path.join(RAIZ, 'scripts', 'validar_fichas.py'), arquivo], { encoding: 'utf-8' });
+  const saida = execFileSync(PYTHON, [path.join(RAIZ, 'scripts', 'validar_fichas.py'), arquivo], { encoding: 'utf-8' });
   console.log(saida.trimEnd().replace(/^/gm, '      '));
   afirmar(!saida.includes('INVÁLIDO'), 'JSON exportado passa no validador dos schemas');
 
@@ -243,7 +282,7 @@ async function testarOffline(page, contexto) {
   await contexto.setOffline(true);
   await page.reload();
   await page.getByText('Nova ficha').waitFor();
-  afirmar((await page.locator('.cartao-talhoes').textContent()).includes('3 talhões do WebGIS'), 'talhões continuam no aparelho sem internet');
+  afirmar((await page.locator('.cartao-talhoes').textContent()).includes('3 talhões · 2 terraços do WebGIS'), 'talhões e terraços continuam no aparelho sem internet');
   await page.locator('a[href="#/nova/cigarrinha_raiz"]').click();
   await page.getByRole('button', { name: 'Identificar talhão pelo GPS' }).waitFor();
   await contexto.setGeolocation(LOCAL.th1);
@@ -255,7 +294,7 @@ async function testarOffline(page, contexto) {
 
 async function main() {
   const site = montarSite();
-  const servidor = spawn('python3', ['-m', 'http.server', String(PORTA), '-d', site], { stdio: 'ignore' });
+  const servidor = spawn(PYTHON, ['-m', 'http.server', String(PORTA), '-d', site], { stdio: 'ignore' });
   let navegador;
   try {
     await esperarServidor();
@@ -269,14 +308,15 @@ async function main() {
     page.on('pageerror', (e) => errosConsole.push(e.message));
     page.on('dialog', (d) => d.accept());
     await page.goto(URL_APP);
-    await page.locator('.cartao-talhoes').getByText(/talhões do WebGIS$/).waitFor();
-    afirmar((await page.locator('.cartao-talhoes').textContent()).includes('3 talhões do WebGIS'),
-      'baixa os talhões do WebGIS ao abrir (ignora feição sem nome de talhão)');
+    await page.locator('.cartao-talhoes').getByText(/terraços do WebGIS$/).waitFor();
+    afirmar((await page.locator('.cartao-talhoes').textContent()).includes('3 talhões · 2 terraços do WebGIS'),
+      'baixa os talhões e os terraços do WebGIS ao abrir (ignora feição sem nome de talhão)');
     await page.screenshot({ path: path.join(SAIDA, 'inicio-vazio.png') });
 
     await testarPragasSolo(page, contexto);
     await testarCigarrinha(page, contexto);
     await testarCQ(page, contexto);
+    await testarTelaGps(page, contexto);
     await exportarEValidar(page);
     await testarOffline(page, contexto);
     afirmar(errosConsole.length === 0, `sem erros de JavaScript ${errosConsole.join(' | ')}`);

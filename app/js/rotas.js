@@ -1,4 +1,4 @@
-// Navegação por hash (#/, #/nova/<tipo>, #/ficha/<id>, #/parametros).
+// Navegação por hash (#/, #/nova/<tipo>, #/ficha/<id>, #/parametros, #/gps).
 
 let desenhar = () => {};
 

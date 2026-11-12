@@ -172,7 +172,7 @@ export function campoEspuma({ rotulo, valor, aoMudar }) {
 
 // ---------- GPS ----------
 
-const PRECISAO_ACEITAVEL_M = 20;
+export const PRECISAO_ACEITAVEL_M = 20;
 
 function geoDePosicao(pos) {
   const c = pos.coords;
@@ -189,15 +189,63 @@ function geoDePosicao(pos) {
 export function mensagemErroGps(err) {
   if (!navigator.geolocation) return 'Este aparelho não tem GPS disponível no navegador.';
   if (err?.code === 1) return 'Permissão de localização negada. Libere o acesso nas configurações do navegador.';
-  if (err?.code === 3) return 'O GPS demorou para responder. Vá para céu aberto e tente de novo.';
+  if (err?.code === 2) return 'Sinal de GPS indisponível. Confira se a localização do aparelho está ligada no modo de alta precisão e tente de novo.';
+  if (err?.code === 3) return 'O GPS não encontrou sinal a tempo. Vá para céu aberto, aguarde um pouco parado e tente de novo.';
   return 'Não foi possível obter a localização. Tente de novo.';
 }
 
-export function capturarGps(timeout = 20000) {
+// Usa watchPosition em vez de getCurrentPosition: aparelhos antigos levam de 30 a 60 s
+// para o primeiro fix (partida a frio, sem A-GPS no campo) e alguns nunca respondem a
+// getCurrentPosition com alta precisão. Fica com a melhor leitura recebida e devolve
+// assim que ela atinge `alvo` metros, ou devolve a melhor que houver ao fim do prazo.
+// Se não chegar nenhum fix de alta precisão, também liga uma leitura de baixa precisão.
+export function capturarGps(timeout = 60000, { alvo = PRECISAO_ACEITAVEL_M, aoProgresso } = {}) {
   return new Promise((ok, falha) => {
-    if (!navigator.geolocation) return falha(null);
-    navigator.geolocation.getCurrentPosition((p) => ok(geoDePosicao(p)), falha,
-      { enableHighAccuracy: true, timeout, maximumAge: 0 });
+    const geo = navigator.geolocation;
+    if (!geo) return falha(null);
+    const vigias = [];
+    const timers = [];
+    let melhor = null;
+    let ultimoErro = null;
+    let fim = false;
+
+    function encerrar() {
+      fim = true;
+      vigias.forEach((id) => geo.clearWatch(id));
+      timers.forEach(clearTimeout);
+    }
+    function sucesso(p) {
+      if (fim) return;
+      const acc = p.coords.accuracy ?? Infinity;
+      if (!melhor || acc < (melhor.coords.accuracy ?? Infinity)) {
+        melhor = p;
+        aoProgresso?.(geoDePosicao(p));
+      }
+      if (acc <= alvo) {
+        encerrar();
+        ok(geoDePosicao(melhor));
+      }
+    }
+    function erro(e) {
+      if (fim) return;
+      ultimoErro = e;
+      if (e?.code === 1) { encerrar(); falha(e); }
+      // Códigos 2 e 3 costumam ser passageiros em aparelhos antigos: continua esperando.
+    }
+    function vigiar(alta) {
+      try {
+        vigias.push(geo.watchPosition(sucesso, erro, { enableHighAccuracy: alta, maximumAge: alta ? 0 : 30000 }));
+      } catch (e) { erro(e); }
+    }
+
+    vigiar(true);
+    timers.push(setTimeout(() => { if (!melhor && !fim) vigiar(false); }, Math.min(15000, timeout / 2)));
+    timers.push(setTimeout(() => {
+      if (fim) return;
+      encerrar();
+      if (melhor) ok(geoDePosicao(melhor));
+      else falha(ultimoErro?.code === 2 ? ultimoErro : { code: 3 });
+    }, timeout));
   });
 }
 
@@ -227,7 +275,9 @@ export function campoGps({ rotulo, obrigatorio, valor, aoMudar }) {
   botao.addEventListener('click', async () => {
     desenhar('capturando');
     try {
-      valor = await capturarGps();
+      valor = await capturarGps(60000, {
+        aoProgresso: (g) => { if (g.precisao_m != null) info.textContent = `Melhorando o sinal… ±${fmt(g.precisao_m, 0)} m`; },
+      });
       aoMudar(valor);
       desenhar();
     } catch (err) {
@@ -281,7 +331,7 @@ export function campoFotos({ rotulo, valor, aoMudar, exigirGps, gpsDoItem }) {
       e.target.value = '';
       if (!arquivos.length) return;
       let geo = null;
-      try { geo = await capturarGps(10000); } catch { geo = gpsDoItem?.() ?? null; }
+      try { geo = await capturarGps(15000, { alvo: 30 }); } catch { geo = gpsDoItem?.() ?? null; }
       if (exigirGps && !geo) {
         aviso('Não foi possível obter o GPS. Capture a localização da amostra e tente de novo.', 'perigo');
         return;

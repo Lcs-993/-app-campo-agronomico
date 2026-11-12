@@ -1,10 +1,11 @@
 // Service worker: guarda os arquivos do app para funcionar sem internet.
-const VERSAO = 'campo-v1';
+const VERSAO = 'campo-v2';
 const ARQUIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'parametros-pda.json', 'css/app.css',
   'icones/logo.png', 'icones/icone-192.png', 'icones/icone-512.png',
   'js/main.js', 'js/ui.js', 'js/db.js', 'js/rotas.js', 'js/regras.js', 'js/fichas.js', 'js/componentes.js', 'js/talhoes.js',
-  'js/telas/inicio.js', 'js/telas/ficha.js', 'js/telas/parametros.js',
+  'js/geometria.js', 'js/terracos.js', 'js/restricoes.js',
+  'js/telas/inicio.js', 'js/telas/ficha.js', 'js/telas/parametros.js', 'js/telas/gps.js',
 ];
 
 self.addEventListener('install', (e) => {
@@ -30,7 +31,7 @@ self.addEventListener('fetch', (e) => {
     );
     return;
   }
-  // Talhões do WebGIS: o app guarda uma cópia própria no IndexedDB; aqui só passa adiante.
+  // Talhões e terraços do WebGIS: o app guarda uma cópia própria no IndexedDB; aqui só passa adiante.
   if (!new URL(e.request.url).pathname.startsWith(new URL(self.registration.scope).pathname)) return;
   e.respondWith(caches.match(e.request, { ignoreSearch: true }).then((r) => r ?? fetch(e.request)));
 });

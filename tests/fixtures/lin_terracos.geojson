@@ -1,0 +1,4 @@
+{"type":"FeatureCollection","name":"lin_terracos","crs":{"type":"name","properties":{"name":"urn:ogc:def:crs:OGC:1.3:CRS84"}},"features":[
+{"type":"Feature","properties":{"fid":1},"geometry":{"type":"LineString","coordinates":[[-47.8115,-21.1790],[-47.8085,-21.1790]]}},
+{"type":"Feature","properties":{"fid":2},"geometry":{"type":"MultiLineString","coordinates":[[[-47.8070,-21.1795],[-47.8050,-21.1795]]]}}
+]}
