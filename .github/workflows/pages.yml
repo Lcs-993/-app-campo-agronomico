@@ -1,0 +1,70 @@
+# Testa e publica o app de campo (pasta app/) no GitHub Pages a cada push no main.
+# Pré-requisito (uma vez): Settings → Pages → Source: "GitHub Actions".
+
+name: Publicar app no GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependências
+        run: |
+          pip install -r requirements.txt
+          npm install --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+
+      - name: Validar exemplos dos schemas
+        run: python scripts/validar_fichas.py schemas/exemplos/*.json
+
+      - name: Testes do validador
+        run: python -m unittest discover -s tests -v
+
+      - name: Teste do app no navegador
+        run: node tests/e2e_app.js
+
+  publicar:
+    needs: testes
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versionar o cache offline
+        # Troca o nome do cache do service worker a cada publicação, para os
+        # aparelhos baixarem a versão nova em vez de ficarem presos na antiga.
+        run: sed -i "s/const VERSAO = 'campo-v1';/const VERSAO = 'campo-${GITHUB_SHA::7}';/" app/sw.js && grep -n "const VERSAO" app/sw.js
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

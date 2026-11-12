@@ -39,7 +39,17 @@ Para rodar no computador:
 python3 -m http.server 8000 -d app
 ```
 
-e abra http://localhost:8000. GPS, câmera e modo offline só funcionam em `localhost` ou em HTTPS, então para usar no celular o app precisa estar publicado num endereço HTTPS (por exemplo, GitHub Pages).
+e abra http://localhost:8000. GPS, câmera e modo offline só funcionam em `localhost` ou em HTTPS.
+
+### Publicação (GitHub Pages)
+
+A cada push no `main`, o workflow `.github/workflows/pages.yml` roda os testes e, se passarem, publica a pasta `app/` em:
+
+**https://lcs-993.github.io/-app-campo-agronomico/**
+
+Para instalar no celular: abra o endereço no Chrome (Android) ou Safari (iPhone) e use "Adicionar à tela inicial". Depois de aberto uma vez, funciona sem internet. Versões novas são baixadas sozinhas e entram em uso na próxima vez que o app for aberto.
+
+Configuração (uma única vez): em Settings → Pages, escolher **Source: GitHub Actions**.
 
 **Ainda não existe:** servidor de sincronização (as fichas ficam no aparelho e saem pelo botão de exportar), login e perfis (qualquer pessoa com o aparelho pode registrar o parecer do PDA) e cadastro de fazendas e talhões (os nomes são digitados, com sugestão dos já usados).
 
