@@ -4,8 +4,12 @@ O JSON Schema não consegue comparar um campo com outro (ex.: tocos brocados
 <= tocos examinados) nem refazer cálculos. Essas regras ficam aqui, como
 referência para a implementação no app.
 
+Aceita uma ficha por arquivo ou o arquivo exportado pelo app
+({"fichas": [...]}), validando cada ficha dele.
+
 Uso:
     python scripts/validar_fichas.py schemas/exemplos/*.json
+    python scripts/validar_fichas.py fichas-2026-11-12.json
 """
 
 import json
@@ -230,14 +234,19 @@ def main(caminhos):
     falhou = False
     for caminho in caminhos:
         documento = json.loads(Path(caminho).read_text(encoding="utf-8"))
-        erros = validar(documento)
-        if erros:
-            falhou = True
-            print(f"INVÁLIDO  {caminho}")
-            for erro in erros:
-                print(f"  - {erro}")
+        if isinstance(documento.get("fichas"), list):
+            fichas = [(f"{caminho} [{i}]", f) for i, f in enumerate(documento["fichas"])]
         else:
-            print(f"OK        {caminho}")
+            fichas = [(caminho, documento)]
+        for nome, ficha in fichas:
+            erros = validar(ficha)
+            if erros:
+                falhou = True
+                print(f"INVÁLIDO  {nome}")
+                for erro in erros:
+                    print(f"  - {erro}")
+            else:
+                print(f"OK        {nome}")
     return 1 if falhou else 0
 
 

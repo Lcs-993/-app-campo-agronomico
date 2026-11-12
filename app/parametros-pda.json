@@ -1,0 +1,7 @@
+{
+  "versao": 1,
+  "vigente_desde": "2026-11-01",
+  "cigarrinha_raiz": { "nde_ninfas_por_metro": 1.0 },
+  "cq_infestacao_final_broca": { "limite_alerta_pct": 3.0, "limite_bloqueio_pct": 5.0 },
+  "pragas_solo": { "pragas_criticas": ["migdolus", "sphenophorus_levis"] }
+}

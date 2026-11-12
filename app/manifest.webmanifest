@@ -1,0 +1,17 @@
+{
+  "name": "Campo Agronômico",
+  "short_name": "Campo",
+  "description": "Fichas de campo de Fitossanidade e Controle de Qualidade da cana-de-açúcar.",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f2ec",
+  "theme_color": "#1f5130",
+  "icons": [
+    { "src": "icones/icone.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "icones/icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icones/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
