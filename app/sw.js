@@ -1,5 +1,5 @@
 // Service worker: guarda os arquivos do app para funcionar sem internet.
-const VERSAO = 'campo-v2';
+const VERSAO = 'campo-v3';
 const ARQUIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'parametros-pda.json', 'css/app.css',
   'icones/logo.png', 'icones/icone-192.png', 'icones/icone-512.png',
