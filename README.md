@@ -13,7 +13,17 @@ Aplicativo móvel de campo (offline-first) para a cultura da cana-de-açúcar, c
 ```
 docs/      Documentação de arquitetura e decisões
 prompts/   Prompts dos agentes de IA (um arquivo por agente)
-schemas/   Estruturas de dados JSON/SQL das fichas de campo
+schemas/   Schemas JSON das fichas de campo (ver schemas/README.md)
+scripts/   Validador das fichas (schema + regras de negócio)
+tests/     Testes do validador
+```
+
+## Validar as fichas
+
+```bash
+pip install -r requirements.txt
+python scripts/validar_fichas.py schemas/exemplos/*.json
+python -m unittest discover -s tests
 ```
 
 ## Agentes de IA

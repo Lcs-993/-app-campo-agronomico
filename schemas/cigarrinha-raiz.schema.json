@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://app-campo-agronomico/schemas/cigarrinha-raiz.schema.json",
+  "title": "Monitoramento de Cigarrinha-da-Raiz",
+  "description": "Ficha de Fitossanidade (MIP) para Mahanarva fimbriolata. Ver prompts/02-cigarrinha-da-raiz.md.",
+  "type": "object",
+  "required": ["metadados", "identificacao", "pontos"],
+  "properties": {
+    "tipo_ficha": { "const": "cigarrinha_raiz" },
+    "metadados": { "$ref": "comum.schema.json#/$defs/metadados" },
+    "identificacao": {
+      "$ref": "comum.schema.json#/$defs/identificacao",
+      "required": ["data", "fazenda", "talhao", "amostrador"]
+    },
+    "pontos": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/ponto" }
+    },
+    "resultados": {
+      "readOnly": true,
+      "description": "Calculado pelo app a partir dos pontos e dos parâmetros do PDA.",
+      "type": "object",
+      "properties": {
+        "total_metros": { "type": "number", "minimum": 0 },
+        "total_ninfas": { "type": "integer", "minimum": 0 },
+        "total_adultos": { "type": "integer", "minimum": 0 },
+        "ninfas_por_metro": {
+          "type": "number", "minimum": 0,
+          "description": "Σ ninfas / Σ metros lineares."
+        },
+        "nde_referencia": {
+          "type": "number", "minimum": 0,
+          "description": "NDE vigente (ninfas/m) copiado dos parâmetros do PDA no momento do cálculo."
+        },
+        "acima_nde": { "type": "boolean" },
+        "fase_predominante": {
+          "enum": ["ninfa", "adulto", "empate", "sem_ocorrencia"],
+          "description": "Compara total_ninfas com total_adultos."
+        },
+        "urgencia_aplicacao": {
+          "enum": ["nenhuma", "baixa", "media", "alta"],
+          "description": "Sugestão de urgência de controle biológico/químico. Critérios a definir com o PDA."
+        }
+      },
+      "additionalProperties": false
+    },
+    "observacoes": { "type": "string" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "ponto": {
+      "type": "object",
+      "required": ["numero", "geolocalizacao", "metros_lineares", "ninfas", "adultos", "espuma"],
+      "properties": {
+        "numero": { "type": "integer", "minimum": 1 },
+        "geolocalizacao": { "$ref": "comum.schema.json#/$defs/geolocalizacao" },
+        "metros_lineares": { "type": "number", "exclusiveMinimum": 0 },
+        "ninfas": { "type": "integer", "minimum": 0 },
+        "adultos": { "type": "integer", "minimum": 0 },
+        "espuma": {
+          "type": "object",
+          "required": ["presente"],
+          "properties": {
+            "presente": { "type": "boolean" },
+            "intensidade": {
+              "type": "integer", "minimum": 1, "maximum": 3,
+              "description": "1 = baixa, 2 = média, 3 = alta. Opcional; só quando presente = true."
+            }
+          },
+          "if": { "properties": { "presente": { "const": false } } },
+          "then": { "not": { "required": ["intensidade"] } },
+          "additionalProperties": false
+        },
+        "fotos": { "type": "array", "items": { "$ref": "comum.schema.json#/$defs/foto" } },
+        "observacoes": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

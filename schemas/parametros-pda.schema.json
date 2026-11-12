@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://app-campo-agronomico/schemas/parametros-pda.schema.json",
+  "title": "Parâmetros do Planejamento Agronômico (PDA)",
+  "description": "Limites definidos pelo PDA e baixados para o app. As fichas usam estes valores nos cálculos e alertas, em vez de números fixos no código.",
+  "type": "object",
+  "required": ["versao", "vigente_desde", "cigarrinha_raiz", "cq_infestacao_final_broca", "pragas_solo"],
+  "properties": {
+    "versao": { "type": "integer", "minimum": 1 },
+    "vigente_desde": { "type": "string", "format": "date" },
+    "cigarrinha_raiz": {
+      "type": "object",
+      "required": ["nde_ninfas_por_metro"],
+      "properties": {
+        "nde_ninfas_por_metro": { "type": "number", "minimum": 0, "default": 1.0 }
+      },
+      "additionalProperties": false
+    },
+    "cq_infestacao_final_broca": {
+      "type": "object",
+      "required": ["limite_alerta_pct", "limite_bloqueio_pct"],
+      "properties": {
+        "limite_alerta_pct": { "type": "number", "minimum": 0, "maximum": 100, "default": 3.0 },
+        "limite_bloqueio_pct": { "type": "number", "minimum": 0, "maximum": 100, "default": 5.0 }
+      },
+      "additionalProperties": false
+    },
+    "pragas_solo": {
+      "type": "object",
+      "required": ["pragas_criticas"],
+      "properties": {
+        "pragas_criticas": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["migdolus", "sphenophorus_levis", "metamasius", "broca_da_cana", "pao_de_galinha"] },
+          "default": ["migdolus", "sphenophorus_levis"]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

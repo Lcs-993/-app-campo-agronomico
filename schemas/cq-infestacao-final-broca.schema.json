@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://app-campo-agronomico/schemas/cq-infestacao-final-broca.schema.json",
+  "title": "Índice de Infestação Final da Broca (pré-colheita)",
+  "description": "Ficha de Controle de Qualidade para Diatraea saccharalis, usada na liberação de corte. Ver prompts/03-cq-infestacao-final-broca.md.",
+  "type": "object",
+  "required": ["metadados", "identificacao", "area_ha", "amostras", "status_liberacao_corte"],
+  "properties": {
+    "tipo_ficha": { "const": "cq_infestacao_final_broca" },
+    "metadados": { "$ref": "comum.schema.json#/$defs/metadados" },
+    "identificacao": { "$ref": "comum.schema.json#/$defs/identificacao" },
+    "area_ha": { "type": "number", "exclusiveMinimum": 0 },
+    "amostras": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/amostra" }
+    },
+    "status_liberacao_corte": {
+      "enum": ["liberado", "alerta", "bloqueado", "liberado_por_parecer_pda", "reprovado_por_parecer_pda"],
+      "description": "liberado: II ≤ 3%. alerta: 3% < II ≤ 5% (sinalizado ao PDA). bloqueado: II > 5%, aguardando parecer técnico. Os dois últimos só existem com parecer_pda."
+    },
+    "parecer_pda": { "$ref": "#/$defs/parecer_pda" },
+    "resultados": {
+      "readOnly": true,
+      "description": "Calculado pelo app a partir das amostras e dos parâmetros do PDA.",
+      "type": "object",
+      "properties": {
+        "total_entrenos": { "type": "integer", "minimum": 0 },
+        "total_entrenos_danificados": { "type": "integer", "minimum": 0 },
+        "indice_infestacao_pct": {
+          "type": "number", "minimum": 0, "maximum": 100,
+          "description": "(Σ entrenós danificados / Σ entrenós totais) × 100."
+        },
+        "limite_alerta_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "limite_bloqueio_pct": { "type": "number", "minimum": 0, "maximum": 100 }
+      },
+      "additionalProperties": false
+    },
+    "observacoes": { "type": "string" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status_liberacao_corte": { "enum": ["liberado_por_parecer_pda", "reprovado_por_parecer_pda"] } },
+        "required": ["status_liberacao_corte"]
+      },
+      "then": { "required": ["parecer_pda"] }
+    }
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "amostra": {
+      "type": "object",
+      "required": ["numero", "geolocalizacao", "entrenos_totais", "entrenos_danificados"],
+      "properties": {
+        "numero": { "type": "integer", "minimum": 1 },
+        "geolocalizacao": { "$ref": "comum.schema.json#/$defs/geolocalizacao" },
+        "entrenos_totais": { "type": "integer", "minimum": 1 },
+        "entrenos_danificados": {
+          "type": "integer", "minimum": 0,
+          "description": "Brocados ou com podridão associada. Regra: não pode ser maior que entrenos_totais (validada pelo app)."
+        },
+        "fotos": {
+          "type": "array",
+          "description": "Fotos georreferenciadas dos entrenós danificados.",
+          "items": {
+            "allOf": [
+              { "$ref": "comum.schema.json#/$defs/foto" },
+              { "required": ["geolocalizacao"] }
+            ]
+          }
+        },
+        "observacoes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "parecer_pda": {
+      "type": "object",
+      "required": ["responsavel", "data", "decisao", "justificativa"],
+      "properties": {
+        "responsavel": { "type": "string", "minLength": 1 },
+        "data": { "type": "string", "format": "date" },
+        "decisao": { "enum": ["liberar", "reprovar"] },
+        "justificativa": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

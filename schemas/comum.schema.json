@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://app-campo-agronomico/schemas/comum.schema.json",
+  "title": "Definições comuns",
+  "description": "Blocos reutilizados por todas as fichas de campo: metadados de sincronização offline, identificação do local, georreferenciamento, fotos e contagem por estágio.",
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Identificador gerado no próprio dispositivo, para permitir criação offline sem colisão."
+    },
+    "metadados": {
+      "type": "object",
+      "description": "Controle do registro no aplicativo offline-first.",
+      "required": ["id", "versao_schema", "criado_em", "dispositivo_id", "status_sincronizacao"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "versao_schema": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "Versão do schema usada para criar o registro (ex.: 1.0.0)."
+        },
+        "criado_em": { "type": "string", "format": "date-time" },
+        "atualizado_em": { "type": "string", "format": "date-time" },
+        "dispositivo_id": { "type": "string", "minLength": 1 },
+        "status_sincronizacao": {
+          "type": "string",
+          "enum": ["pendente", "sincronizado", "erro"],
+          "default": "pendente"
+        }
+      },
+      "additionalProperties": false
+    },
+    "identificacao": {
+      "type": "object",
+      "description": "Onde e quando a ficha foi preenchida. Cada ficha define quais campos são obrigatórios.",
+      "required": ["data", "fazenda", "talhao"],
+      "properties": {
+        "data": { "type": "string", "format": "date" },
+        "fazenda": { "type": "string", "minLength": 1 },
+        "talhao": { "type": "string", "minLength": 1 },
+        "bloco": { "type": "string", "minLength": 1 },
+        "amostrador": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "geolocalizacao": {
+      "type": "object",
+      "description": "Coordenada capturada pelo GPS do dispositivo (WGS 84).",
+      "required": ["latitude", "longitude", "capturado_em"],
+      "properties": {
+        "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+        "longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+        "precisao_m": { "type": "number", "minimum": 0, "description": "Precisão horizontal informada pelo GPS, em metros." },
+        "altitude_m": { "type": "number" },
+        "capturado_em": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "foto": {
+      "type": "object",
+      "required": ["id", "arquivo", "capturado_em"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "arquivo": { "type": "string", "minLength": 1, "description": "Caminho local ou URL após a sincronização." },
+        "legenda": { "type": "string" },
+        "capturado_em": { "type": "string", "format": "date-time" },
+        "geolocalizacao": { "$ref": "#/$defs/geolocalizacao" }
+      },
+      "additionalProperties": false
+    },
+    "contagem_estagios": {
+      "type": "object",
+      "description": "Número de indivíduos encontrados em cada estágio de desenvolvimento.",
+      "required": ["larva", "pupa", "adulto"],
+      "properties": {
+        "larva": { "type": "integer", "minimum": 0, "default": 0 },
+        "pupa": { "type": "integer", "minimum": 0, "default": 0 },
+        "adulto": { "type": "integer", "minimum": 0, "default": 0 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

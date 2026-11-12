@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://app-campo-agronomico/schemas/pragas-solo.schema.json",
+  "title": "Monitoramento de Pragas do Solo",
+  "description": "Ficha de Fitossanidade (MIP): contagem por toco em cada ponto de amostragem. Ver prompts/01-pragas-do-solo.md.",
+  "type": "object",
+  "required": ["metadados", "identificacao", "pontos"],
+  "properties": {
+    "tipo_ficha": { "const": "pragas_solo" },
+    "metadados": { "$ref": "comum.schema.json#/$defs/metadados" },
+    "identificacao": {
+      "$ref": "comum.schema.json#/$defs/identificacao",
+      "required": ["data", "fazenda", "talhao", "bloco", "amostrador"]
+    },
+    "pontos": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/ponto" }
+    },
+    "resultados": {
+      "readOnly": true,
+      "description": "Calculado pelo app a partir dos pontos; não é digitado pelo amostrador.",
+      "type": "object",
+      "properties": {
+        "total_tocos_examinados": { "type": "integer", "minimum": 0 },
+        "total_tocos_brocados": { "type": "integer", "minimum": 0 },
+        "percentual_tocos_brocados": {
+          "type": "number", "minimum": 0, "maximum": 100,
+          "description": "(Σ tocos brocados / Σ tocos examinados) × 100, no talhão."
+        },
+        "alerta_pragas_criticas": {
+          "type": "boolean",
+          "description": "Verdadeiro se houver Sphenophorus levis ou Migdolus em qualquer estágio, em qualquer ponto."
+        },
+        "pragas_criticas_detectadas": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["migdolus", "sphenophorus_levis"] }
+        }
+      },
+      "additionalProperties": false
+    },
+    "observacoes": { "type": "string" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "ponto": {
+      "type": "object",
+      "required": [
+        "numero", "geolocalizacao", "tocos_examinados", "tocos_brocados",
+        "migdolus", "sphenophorus_levis", "metamasius", "broca_da_cana", "pao_de_galinha"
+      ],
+      "properties": {
+        "numero": { "type": "integer", "minimum": 1 },
+        "geolocalizacao": { "$ref": "comum.schema.json#/$defs/geolocalizacao" },
+        "tocos_examinados": { "type": "integer", "minimum": 1 },
+        "tocos_brocados": {
+          "type": "integer", "minimum": 0,
+          "description": "Regra: não pode ser maior que tocos_examinados (validada pelo app)."
+        },
+        "migdolus": { "$ref": "comum.schema.json#/$defs/contagem_estagios", "description": "Migdolus fryanus — praga crítica." },
+        "sphenophorus_levis": { "$ref": "comum.schema.json#/$defs/contagem_estagios", "description": "Sphenophorus levis — praga crítica." },
+        "metamasius": { "$ref": "comum.schema.json#/$defs/contagem_estagios" },
+        "broca_da_cana": { "$ref": "comum.schema.json#/$defs/contagem_estagios", "description": "Diatraea saccharalis no solo/toco." },
+        "pao_de_galinha": { "$ref": "comum.schema.json#/$defs/contagem_estagios", "description": "Melolonthidae." },
+        "fotos": { "type": "array", "items": { "$ref": "comum.schema.json#/$defs/foto" } },
+        "observacoes": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
