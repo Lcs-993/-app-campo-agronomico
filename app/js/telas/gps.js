@@ -30,6 +30,16 @@ function segundos(ms) {
   return s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${s % 60} s`;
 }
 
+/** Nome do navegador, para as dicas de permissão apontarem para o lugar certo. */
+function nomeNavegador() {
+  const ua = navigator.userAgent;
+  if (/SamsungBrowser/i.test(ua)) return 'Samsung Internet';
+  if (/Firefox|FxiOS/i.test(ua)) return 'Firefox';
+  if (/EdgA?\//i.test(ua)) return 'Edge';
+  if (/OPR\/|Opera/i.test(ua)) return 'Opera';
+  return 'Chrome';
+}
+
 async function copiar(texto) {
   try {
     await navigator.clipboard.writeText(texto);
@@ -61,6 +71,7 @@ export async function telaGps() {
   let ultimoErro = null;
   let permissao = 'desconhecida';
   const eventos = [];
+  const navegador = nomeNavegador();
 
   // ---------- elementos ----------
   const estado = h('div', { class: 'gps-estado', role: 'status', 'aria-live': 'polite' });
@@ -158,11 +169,25 @@ export async function telaGps() {
     ].filter(Boolean));
   }
 
+  // A Permissions API informa só a permissão guardada. Se o navegador liberou a
+  // localização apenas para esta visita (o Firefox faz isso quando "Lembrar
+  // decisão" fica desmarcado), ela continua "prompt" mesmo com leituras chegando.
+  function situacaoPermissao() {
+    if (permissao === 'granted') return 'liberada';
+    if (permissao === 'denied') return 'negada';
+    if (leituras > 0) return 'liberada nesta visita';
+    if (permissao === 'prompt') return 'ainda não perguntada';
+    return 'não informada';
+  }
+
   function desenharAparelho() {
-    const nomesPermissao = { granted: 'Liberada', denied: 'Negada', prompt: 'Ainda não perguntada', desconhecida: 'Não informada' };
+    const sit = situacaoPermissao();
     indicadoresAparelho.replaceChildren(
-      linha('Permissão de localização', nomesPermissao[permissao] ?? permissao,
-        permissao === 'denied' ? chip('Libere nas configurações', 'perigo') : null),
+      linha('Permissão de localização', sit[0].toUpperCase() + sit.slice(1),
+        sit === 'negada' ? chip('Libere nas configurações', 'perigo')
+          : sit === 'liberada nesta visita'
+            ? h('span', { class: 'campo-dica' }, `O ${navegador} pode pedir de novo da próxima vez. Para liberar de vez, toque no cadeado ao lado do endereço → Permissões → Localização → Permitir${navegador === 'Firefox' ? ' (ou marque "Lembrar decisão" quando ele perguntar)' : ''}.`)
+            : null),
       linha('Conexão segura (HTTPS)', window.isSecureContext ? 'Sim' : 'Não',
         window.isSecureContext ? null : chip('O GPS só funciona em HTTPS', 'perigo')),
       linha('Internet', navigator.onLine ? 'Conectado' : 'Sem conexão',
@@ -178,6 +203,7 @@ export async function telaGps() {
     if (primeiroFixMs == null) {
       primeiroFixMs = Date.now() - inicio;
       anotar(`primeiro sinal em ${segundos(primeiroFixMs)}, ±${fmt(p.coords.accuracy, 0)} m`);
+      if (leituras === 1) desenharAparelho();
     } else if (ultima && Math.abs((ultima.coords.accuracy ?? 0) - (p.coords.accuracy ?? 0)) >= 5) {
       anotar(`precisão mudou para ±${fmt(p.coords.accuracy, 0)} m`);
     }
@@ -234,7 +260,7 @@ export async function telaGps() {
       'Diagnóstico do GPS · App de Campo',
       `Data: ${new Date().toLocaleString('pt-BR')}`,
       `Navegador: ${navigator.userAgent}`,
-      `Permissão: ${permissao} · HTTPS: ${window.isSecureContext ? 'sim' : 'não'} · Internet: ${navigator.onLine ? 'sim' : 'não'}`,
+      `Permissão: ${situacaoPermissao()} (navegador informa: ${permissao}) · HTTPS: ${window.isSecureContext ? 'sim' : 'não'} · Internet: ${navigator.onLine ? 'sim' : 'não'}`,
       `Modo: ${modo === 'alta' ? 'alta precisão' : 'baixa precisão'} · Leituras: ${leituras} · Primeiro sinal: ${primeiroFixMs != null ? segundos(primeiroFixMs) : 'nenhum'}`,
       c ? `Última posição: ${c.latitude.toFixed(6)}, ${c.longitude.toFixed(6)} ±${Math.round(c.accuracy)} m` : 'Última posição: nenhuma',
       `Melhor precisão: ${melhorAcc != null ? `±${Math.round(melhorAcc)} m` : '—'}`,
@@ -299,11 +325,11 @@ export async function telaGps() {
         h('h2', null, 'Se o GPS não responder'),
         h('ol', { class: 'gps-dicas' },
           h('li', null, 'Ligue a localização do aparelho e, se existir a opção, o modo "Alta precisão" ou "Melhorar precisão" (Configurações → Localização).'),
-          h('li', null, 'Confira se o navegador (Chrome) tem permissão de localização no Android: Configurações → Apps → Chrome → Permissões → Localização → "Permitir".'),
-          h('li', null, 'No Chrome, toque no cadeado ao lado do endereço e libere a localização para este site.'),
+          h('li', null, `Confira se o navegador (${navegador}) tem permissão de localização no Android: Configurações → Apps → ${navegador} → Permissões → Localização → "Permitir".`),
+          h('li', null, `No ${navegador}, toque no cadeado ao lado do endereço e libere a localização para este site${navegador === 'Firefox' ? '. Quando ele perguntar, marque "Lembrar decisão"' : ''}.`),
           h('li', null, 'Desligue a economia de bateria, que em aparelhos antigos desliga o GPS do navegador.'),
           h('li', null, 'Fique parado a céu aberto por 1 a 2 minutos. Sem internet o primeiro sinal demora mais.'),
-          h('li', null, 'Atualize o Chrome pela Play Store. Versões antigas do navegador têm falhas de GPS.'),
+          h('li', null, `Atualize o ${navegador} pela Play Store. Versões antigas do navegador têm falhas de GPS.`),
           h('li', null, 'Se nada resolver, toque em "Copiar diagnóstico" e envie ao suporte.'))),
       h('section', { class: 'cartao' },
         h('h2', null, 'Registro de eventos'),
