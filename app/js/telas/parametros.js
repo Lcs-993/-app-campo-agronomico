@@ -3,6 +3,8 @@
 import { h, barraTopo, fmt, fmtData } from '../ui.js';
 import { carregarParametros } from '../db.js';
 import { URL_TALHOES } from '../talhoes.js';
+import { URL_TERRACOS } from '../terracos.js';
+import { DISTANCIA_MINIMA_BORDA_M, DISTANCIA_MINIMA_TERRACO_M } from '../restricoes.js';
 import { nomePraga } from '../regras.js';
 
 export async function telaParametros() {
@@ -20,9 +22,16 @@ export async function telaParametros() {
       h('section', { class: 'cartao' }, h('h2', null, 'Pragas do solo'),
         h('dl', { class: 'indicadores' },
           linha('Pragas críticas (alerta imediato)', p.pragas_solo.pragas_criticas.map(nomePraga).join(', ')))),
-      h('section', { class: 'cartao' }, h('h2', null, 'Talhões'),
+      h('section', { class: 'cartao' }, h('h2', null, 'Onde coletar'),
+        h('dl', { class: 'indicadores' },
+          linha('Distância mínima da borda do talhão', `${DISTANCIA_MINIMA_BORDA_M} m para dentro`),
+          linha('Distância mínima dos terraços', `${DISTANCIA_MINIMA_TERRACO_M} m`)),
+        h('p', { class: 'campo-dica' }, 'Pontos fora dessas faixas impedem finalizar a ficha.')),
+      h('section', { class: 'cartao' }, h('h2', null, 'Talhões e terraços'),
         h('p', { class: 'campo-dica' }, 'Camada pol_talhoes do WebGIS, baixada para uso sem internet:'),
-        h('p', { class: 'endereco' }, URL_TALHOES)),
+        h('p', { class: 'endereco' }, URL_TALHOES),
+        h('p', { class: 'campo-dica' }, 'Camada lin_terracos do WebGIS (alinhamentos dos terraços), usada quando estiver publicada:'),
+        h('p', { class: 'endereco' }, URL_TERRACOS)),
       h('p', { class: 'nota' }, 'Os parâmetros são definidos pelo Planejamento Agronômico e atualizados na sincronização.'),
     ),
   );

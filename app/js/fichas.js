@@ -8,6 +8,7 @@ import {
   parecerIniciado, parecerPreenchido,
 } from './regras.js';
 import { fmt } from './ui.js';
+import { restricoesDoPonto } from './restricoes.js';
 
 const estagiosZerados = () => ({ larva: 0, pupa: 0, adulto: 0 });
 
@@ -264,12 +265,15 @@ export function definirTalhao(ficha, talhao, geo) {
   if ('area_ha' in ficha) ficha.area_ha = talhao.area_ha;
 }
 
-/** Erros de um ponto cuja localização não é do talhão da ficha. */
+/**
+ * Erros de localização de um ponto: fora do talhão da ficha, ou dentro dele mas
+ * na faixa proibida perto da borda ou de um terraço (restricoes.js).
+ */
 export function errosTalhaoItem(ficha, item) {
   if (!item.geolocalizacao || ficha.identificacao.talhao_fid == null) return [];
   const tp = item.talhao_ponto;
   if (!tp) return ['não foi possível conferir o talhão deste ponto (talhões não baixados). Capture o GPS de novo.'];
-  if (tp.fid === ficha.identificacao.talhao_fid) return [];
+  if (tp.fid === ficha.identificacao.talhao_fid) return restricoesDoPonto(tp);
   if (tp.fid == null) {
     const perto = tp.mais_proximo ? ` O mais próximo é ${tp.mais_proximo}, a ${tp.distancia_m} m.` : '';
     return [`a localização está fora dos talhões cadastrados no WebGIS.${perto}`];

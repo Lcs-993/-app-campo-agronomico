@@ -23,7 +23,11 @@ tests/     Testes do validador e teste de ponta a ponta do app
 
 Aplicativo web instalável (PWA) que funciona sem internet, com o mesmo visual do [WebGIS](https://github.com/Lcs-993/web_gis): tema escuro por padrão (o claro pode ser escolhido e vale para os dois), verde Bambuí e a marca do WebGIS. Não precisa de compilação: são arquivos HTML, CSS e JavaScript puros.
 
-**Talhão pela localização.** Fazenda e talhão não são digitados: o app usa a camada `pol_talhoes.geojson` do WebGIS (publicada em `lcs-993.github.io/web_gis/geojson/`), guardada no aparelho para uso sem internet. O talhão da ficha é identificado pelo GPS (botão "Identificar talhão pelo GPS" ou o GPS do primeiro ponto), e cada ponto é conferido: ponto em outro talhão ou fora de qualquer talhão impede finalizar. Pontos a até 30 m da borda contam como do talhão, por causa do erro do GPS. A ficha guarda o `fid`, a fazenda e o talhão do WebGIS; na ficha de CQ, a área vem do atributo "Área (ha.)" (ou é calculada do polígono, se o atributo estiver vazio). Os talhões são atualizados sozinhos ao abrir o app com internet, ou pelo botão "Atualizar" da tela inicial.
+**Talhão pela localização.** Fazenda e talhão não são digitados: o app usa a camada `pol_talhoes.geojson` do WebGIS (publicada em `lcs-993.github.io/web_gis/geojson/`), guardada no aparelho para uso sem internet. O talhão da ficha é identificado pelo GPS (botão "Identificar talhão pelo GPS" ou o GPS do primeiro ponto), e cada ponto é conferido: ponto em outro talhão ou fora de qualquer talhão impede finalizar. A ficha guarda o `fid`, a fazenda e o talhão do WebGIS; na ficha de CQ, a área vem do atributo "Área (ha.)" (ou é calculada do polígono, se o atributo estiver vazio). Os talhões são atualizados sozinhos ao abrir o app com internet, ou pelo botão "Atualizar" da tela inicial.
+
+**Onde pode coletar.** O ponto precisa estar dentro do talhão e a pelo menos 30 m da borda, e a pelo menos 30 m de qualquer terraço. Os alinhamentos dos terraços vêm da camada `lin_terracos.geojson` do WebGIS, que é opcional enquanto não for publicada. Ponto na faixa proibida aparece em vermelho e impede finalizar. Detalhes em [docs/restricoes-de-coleta.md](docs/restricoes-de-coleta.md).
+
+**GPS.** A captura espera até 1 minuto e fica com a melhor leitura, para funcionar em aparelhos antigos. A tela "Informações do GPS" (ícone de satélite no topo) mostra coordenadas, precisão, altitude, se o local permite coleta e um diagnóstico para quando o aparelho não acha a posição. O número de satélites não aparece porque nenhum navegador fornece esse dado. Detalhes em [docs/gps.md](docs/gps.md).
 
 | Tela | O que faz |
 |---|---|
@@ -31,7 +35,8 @@ Aplicativo web instalável (PWA) que funciona sem internet, com o mesmo visual d
 | Pragas do Solo | Talhão pelo GPS; contagem por toco e por estágio; alerta imediato (com vibração) para *Migdolus* e *Sphenophorus levis*; % de tocos brocados ao vivo |
 | Cigarrinha-da-Raiz | Talhão pelo GPS; metros, ninfas, adultos e espuma; ninfas/m comparado ao NDE; fase predominante |
 | Infestação Final da Broca | Talhão e área pelo GPS; entrenós totais e danificados, fotos com GPS; II ao vivo; liberação, alerta ou bloqueio de corte; parecer do PDA quando bloqueado |
-| Parâmetros do PDA | Limites vigentes e origem dos talhões |
+| Informações do GPS | Coordenadas, precisão, altitude, velocidade, situação do local de coleta (borda e terraços) e diagnóstico do GPS |
+| Parâmetros do PDA | Limites vigentes, distâncias mínimas de coleta e origem dos talhões e terraços |
 
 As fichas são salvas automaticamente no aparelho (IndexedDB) enquanto são preenchidas. Uma ficha só é finalizada quando passa em todas as regras dos schemas; o JSON gerado segue `schemas/`.
 
@@ -41,7 +46,7 @@ Para rodar no computador:
 python3 -m http.server 8000 -d app
 ```
 
-e abra http://localhost:8000. GPS, câmera e modo offline só funcionam em `localhost` ou em HTTPS. Localmente, os talhões só carregam se a pasta do WebGIS estiver ao lado, como no GitHub Pages (por exemplo, servindo uma pasta com `app` como `-app-campo-agronomico/` e o repositório `web_gis/`); o teste `tests/e2e_app.js` monta isso sozinho com a fixture `tests/fixtures/pol_talhoes.geojson`.
+e abra http://localhost:8000. GPS, câmera e modo offline só funcionam em `localhost` ou em HTTPS. Localmente, os talhões só carregam se a pasta do WebGIS estiver ao lado, como no GitHub Pages (por exemplo, servindo uma pasta com `app` como `-app-campo-agronomico/` e o repositório `web_gis/`); o teste `tests/e2e_app.js` monta isso sozinho com as fixtures `tests/fixtures/pol_talhoes.geojson` e `tests/fixtures/lin_terracos.geojson`.
 
 ### Publicação (GitHub Pages)
 

@@ -3,21 +3,24 @@
 // coordenada está.
 
 import { obterCache, salvarCache } from './db.js';
+import { RAIO_TERRA_M, rad, caixaDeLinhas, distanciaLinhasM } from './geometria.js';
+import { distanciaTerracoM } from './terracos.js';
 
 // O WebGIS e este app ficam no mesmo domínio do GitHub Pages
 // (lcs-993.github.io/web_gis/ e lcs-993.github.io/-app-campo-agronomico/).
 export const URL_TALHOES = new URL('../web_gis/geojson/pol_talhoes.geojson', document.baseURI).href;
 
-/** Distância máxima até a borda de um talhão para ainda considerá-lo (erro do GPS). */
+/**
+ * Distância máxima fora da borda para ainda IDENTIFICAR o talhão (erro do GPS).
+ * Não autoriza coletar: para coletar, o ponto precisa estar dentro e a
+ * DISTANCIA_MINIMA_BORDA_M da borda (restricoes.js).
+ */
 export const TOLERANCIA_BORDA_M = 30;
 
 const CHAVE_CACHE = 'talhoes';
 let indice = null;
 
 // ---------- geometria ----------
-
-const RAIO_TERRA_M = 6371008.8;
-const rad = (g) => (g * Math.PI) / 180;
 
 /** Poligonos (lista de anéis [lon, lat]) de Polygon, MultiPolygon ou GeometryCollection. */
 function poligonosDe(geom) {
@@ -29,11 +32,7 @@ function poligonosDe(geom) {
 }
 
 function caixa(poligonos) {
-  let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity];
-  for (const pol of poligonos) for (const [x, y] of pol[0]) {
-    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
-  }
-  return [x0, y0, x1, y1];
+  return caixaDeLinhas(poligonos.map((pol) => pol[0]));
 }
 
 function dentroDoAnel(x, y, anel) {
@@ -52,23 +51,9 @@ function dentroDoPoligono(x, y, pol) {
   return true;
 }
 
-/** Distância em metros de um ponto à borda mais próxima (projeção local, boa para curtas distâncias). */
+/** Distância em metros de um ponto à borda mais próxima (anéis externos e buracos). */
 function distanciaBordaM(lon, lat, poligonos) {
-  const kx = Math.cos(rad(lat)) * rad(1) * RAIO_TERRA_M;
-  const ky = rad(1) * RAIO_TERRA_M;
-  let melhor = Infinity;
-  for (const pol of poligonos) for (const anel of pol) {
-    for (let i = 1; i < anel.length; i++) {
-      const ax = (anel[i - 1][0] - lon) * kx; const ay = (anel[i - 1][1] - lat) * ky;
-      const bx = (anel[i][0] - lon) * kx; const by = (anel[i][1] - lat) * ky;
-      const dx = bx - ax; const dy = by - ay;
-      const l2 = dx * dx + dy * dy;
-      const t = l2 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / l2)) : 0;
-      const d = Math.hypot(ax + t * dx, ay + t * dy);
-      if (d < melhor) melhor = d;
-    }
-  }
-  return melhor;
+  return distanciaLinhasM(lon, lat, poligonos.flat(1));
 }
 
 /** Área geodésica aproximada (esfera), em hectares. */
@@ -158,7 +143,7 @@ export function talhaoPorFid(fid) {
 
 /**
  * Em qual talhão está a coordenada. Retorna
- * { talhao, dentro: true } quando está dentro,
+ * { talhao, dentro: true, distancia_borda_m } quando está dentro,
  * { talhao, dentro: false, distancia_m } quando está a até TOLERANCIA_BORDA_M da borda,
  * { talhao: null, maisProximo, distancia_m } quando não está em nenhum.
  */
@@ -171,7 +156,7 @@ export function localizarTalhao(lon, lat) {
     const [x0, y0, x1, y1] = t.caixa;
     if (lon < x0 - margemPerto || lon > x1 + margemPerto || lat < y0 - margemPerto || lat > y1 + margemPerto) continue;
     const naCaixa = lon >= x0 - margemGrau && lon <= x1 + margemGrau && lat >= y0 - margemGrau && lat <= y1 + margemGrau;
-    if (naCaixa && t.poligonos.some((pol) => dentroDoPoligono(lon, lat, pol))) return { talhao: t, dentro: true, distancia_m: 0 };
+    if (naCaixa && t.poligonos.some((pol) => dentroDoPoligono(lon, lat, pol))) return { talhao: t, dentro: true, distancia_m: 0, distancia_borda_m: distanciaBordaM(lon, lat, t.poligonos) };
     const d = distanciaBordaM(lon, lat, t.poligonos);
     if (!melhor || d < melhor.distancia_m) melhor = { talhao: t, distancia_m: d };
   }
@@ -179,12 +164,27 @@ export function localizarTalhao(lon, lat) {
   return { talhao: null, maisProximo: melhor?.talhao ?? null, distancia_m: melhor ? Math.round(melhor.distancia_m) : null };
 }
 
-/** Resumo do talhão guardado junto do ponto, para conferir se o ponto é do talhão da ficha. */
+/**
+ * Resumo do talhão guardado junto do ponto, para conferir se o ponto é do
+ * talhão da ficha e se respeita as restrições de coleta (restricoes.js):
+ * { fid, nome, dentro, distancia_m (fora da borda), distancia_borda_m (dentro),
+ *   distancia_terraco_m (null sem terraços por perto ou sem a camada) }.
+ */
 export function talhaoDoPonto(geo) {
   if (!geo || !indice) return null;
   const r = localizarTalhao(geo.longitude, geo.latitude);
-  if (!r?.talhao) return { fid: null, distancia_m: r?.distancia_m ?? null, mais_proximo: r?.maisProximo ? nomeCurto(r.maisProximo) : null };
-  return { fid: r.talhao.fid, nome: nomeCurto(r.talhao), distancia_m: r.distancia_m };
+  const terraco = distanciaTerracoM(geo.longitude, geo.latitude);
+  const distancia_terraco_m = terraco == null ? null : decimetro(terraco);
+  if (!r?.talhao) {
+    return { fid: null, dentro: false, distancia_m: r?.distancia_m ?? null, mais_proximo: r?.maisProximo ? nomeCurto(r.maisProximo) : null, distancia_terraco_m };
+  }
+  return {
+    fid: r.talhao.fid, nome: nomeCurto(r.talhao), dentro: r.dentro, distancia_m: r.distancia_m,
+    distancia_borda_m: r.dentro ? decimetro(r.distancia_borda_m) : null, distancia_terraco_m,
+  };
 }
+
+// Arredonda para baixo, para não aprovar 29,96 m como 30 m.
+const decimetro = (m) => Math.floor(m * 10) / 10;
 
 export const nomeCurto = (t) => `${t.talhao} · ${t.fazenda}`;
