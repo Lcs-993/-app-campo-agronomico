@@ -41,7 +41,7 @@ class Config:
             pasta_fotos=Path(e.get("PASTA_FOTOS", "./dados/fotos")),
             chaves_aparelhos=_chaves(e.get("CHAVES_APARELHOS")),
             chave_leitura=e.get("CHAVE_LEITURA", ""),
-            cors_origens=_lista(e.get("CORS_ORIGENS", "http://localhost:8000,https://lcs-993.github.io")),
+            cors_origens=_lista(e.get("CORS_ORIGENS", "http://localhost:8000,http://localhost:8899,http://127.0.0.1:8899,https://lcs-993.github.io")),
             tamanho_max_foto_mb=float(e.get("TAMANHO_MAX_FOTO_MB", "15")),
             parametros_iniciais=Path(e.get("PARAMETROS_INICIAIS", RAIZ_REPO / "app" / "parametros-pda.json")),
         )

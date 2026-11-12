@@ -56,7 +56,9 @@ A pasta `backend/` tem a API que recebe as fichas, grava num PostgreSQL com Post
 docker compose up -d --build
 ```
 
-Arquitetura, contrato de sincronização, camadas, variáveis e o que falta para produção estão em [docs/backend.md](docs/backend.md).
+O [WebGIS](https://github.com/Lcs-993/web_gis) lê essas camadas: com o endereço do servidor (`?campo=<endereço>` na URL do WebGIS ou Configurações → App de campo), as coletas reais entram no lugar da demonstração, no mesmo cartão de coleta, e os mapas temáticos de CQ, cigarrinha e pragas do solo ficam no painel Camadas.
+
+Arquitetura, contrato de sincronização, camadas, variáveis, ligação com o WebGIS e o que falta para produção estão em [docs/backend.md](docs/backend.md).
 
 Para rodar no computador:
 

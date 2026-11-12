@@ -50,6 +50,7 @@ backend/
   migracoes/
     001_tabelas.sql         talhoes, parametros_pda, fichas, pontos, fotos
     002_camadas.sql         views das camadas do WebGIS
+    003_coletas.sql         camada "coletas" no formato do cartão de coleta do WebGIS
   sql/criar_banco_teste.sql cria o banco descartável dos testes (Docker)
   tests/test_api.py         testes da API contra PostGIS real
 ```
@@ -104,6 +105,7 @@ As chaves vão no cabeçalho `Authorization: Bearer <chave>`. Nas leituras tamb�
 
 | Camada | Geometria | Atributos principais |
 |---|---|---|
+| `coletas` | ponto | Uma feição por ficha, com os atributos do cartão de coleta do WebGIS: Código, Tipo, Alvo, Nível, Resultado, Status, Data da coleta, Responsável, Fazenda, Talhão, Campanha, Fotos (endereços separados por `;`) |
 | `pontos_pragas_solo` | ponto | tocos examinados/brocados, % brocados, contagem por praga, alerta da ficha |
 | `pontos_cigarrinha` | ponto | metros, ninfas, adultos, ninfas/m, espuma e intensidade |
 | `amostras_cq_broca` | ponto | entrenós totais/danificados, II % da amostra, status de corte da ficha |
@@ -112,22 +114,25 @@ As chaves vão no cabeçalho `Authorization: Bearer <chave>`. Nas leituras tamb�
 | `talhoes_cigarrinha` | polígono | última ficha de cigarrinha: ninfas/m, NDE, acima do NDE, fase predominante |
 | `talhoes_pragas_solo` | polígono | última ficha de pragas do solo: % brocados, pragas críticas |
 
-Filtros (todos opcionais): `de` e `ate` (data da coleta, `AAAA-MM-DD`), `fazenda` (como no WebGIS, `40002-ALTO PORTO REAL`, ou só o código, `40002`), `talhao_fid` e `limite` (padrão 10.000, máximo 50.000). Nas camadas de talhões, o filtro de data vale para a data da última ficha de cada talhão.
+O ponto de cada coleta é um dos pontos da ficha, o mais próximo do centro deles. O "Nível" segue os parâmetros do PDA: CQ acima do bloqueio é Alto e acima do alerta é Moderado; cigarrinha acima do NDE é Alto; pragas do solo com praga crítica é Alto.
 
-O nome do amostrador e o aparelho **não** aparecem nas camadas (LGPD). Eles ficam só na tabela `fichas`.
+Filtros (todos opcionais): `de` e `ate` (data da coleta, `AAAA-MM-DD`), `fazenda` (como no WebGIS, `40002-ALTO PORTO REAL`, ou só o código, `40002`), `talhao_fid`, `limite` (padrão 10.000, máximo 50.000) e `rotulos=pt` (nomes e valores legíveis, como "II (%)" e "Corte liberado", usados pelo WebGIS). Nas camadas de talhões, o filtro de data vale para a data da última ficha de cada talhão.
 
-Exemplo de uso no WebGIS (Leaflet):
+O aparelho nunca aparece nas camadas. O nome do amostrador aparece só na camada `coletas` (campo "Responsável" do cartão do WebGIS). Por isso, fora do computador de desenvolvimento, defina `CHAVE_LEITURA` ou, antes da produção, login (LGPD).
 
-```js
-const API = 'https://campo.suaempresa.com.br';
-const resp = await fetch(`${API}/api/v1/camadas/talhoes_cq_broca.geojson?de=2026-11-01`);
-const cores = { liberado: '#2e7d32', alerta: '#f9a825', bloqueado: '#c62828',
-                liberado_por_parecer_pda: '#1565c0', reprovado_por_parecer_pda: '#6a1b9a' };
-L.geoJSON(await resp.json(), {
-  style: (f) => ({ color: cores[f.properties.status_liberacao_corte], weight: 1, fillOpacity: 0.5 }),
-  onEachFeature: (f, l) => l.bindPopup(`${f.properties.talhao}: II ${f.properties.indice_infestacao_pct}%`),
-}).addTo(mapa);
-```
+### Ligação com o WebGIS
+
+O WebGIS ([web_gis](https://github.com/Lcs-993/web_gis)) já sabe ler este servidor (`js/data/campo-api.js` e `CAMPO_LAYERS` em `js/config.js` daquele repositório). Com o endereço do servidor definido, a camada "Coletas do app de campo" entra no lugar da demonstração de coletas, e as camadas de talhões (CQ, cigarrinha, pragas do solo) e de pontos ficam disponíveis no painel Camadas. Para definir o endereço, use uma destas formas:
+
+- abrir o WebGIS com `?campo=<endereço do servidor>`, por exemplo `https://lcs-993.github.io/web_gis/?campo=https://campo.suaempresa.com.br`;
+- em **Configurações → App de campo**, informar o endereço, Testar e "Salvar e recarregar";
+- preencher `CAMPO_API.url` no `js/config.js` do WebGIS, para valer para todos.
+
+Para testar tudo no computador:
+
+1. Suba o backend com `docker compose up -d --build`.
+2. Sirva o WebGIS com `python -m http.server 8899` na pasta do web_gis.
+3. Abra `http://127.0.0.1:8899/?campo=http://127.0.0.1:8080`.
 
 No QGIS, também é possível conectar direto no PostGIS (as views `vw_*` aparecem como camadas), de preferência com um usuário somente leitura.
 
@@ -185,7 +190,7 @@ No GitHub, o workflow `.github/workflows/backend.yml` roda esses testes e constr
 | `PASTA_FOTOS` | `./dados/fotos` (`/dados/fotos` no Docker) | Onde as fotos são gravadas |
 | `CHAVES_APARELHOS` | vazio | `nome:chave,nome2:chave2`. **Vazio deixa o envio aberto**: use só no computador |
 | `CHAVE_LEITURA` | vazio | Exigida nas camadas e fotos, se definida |
-| `CORS_ORIGENS` | `http://localhost:8000,https://lcs-993.github.io` | Origens que podem chamar a API pelo navegador |
+| `CORS_ORIGENS` | `http://localhost:8000,http://localhost:8899,http://127.0.0.1:8899,https://lcs-993.github.io` | Origens que podem chamar a API pelo navegador: o app e o WebGIS publicados e servidos no computador |
 | `TAMANHO_MAX_FOTO_MB` | `15` | Limite por foto |
 | `SENHA_BANCO` | `campo` | Senha do banco no `docker-compose.yml` |
 
@@ -201,7 +206,7 @@ No GitHub, o workflow `.github/workflows/backend.yml` roda esses testes e constr
 - Colocar a API **atrás de HTTPS** (Caddy ou Nginx com Let's Encrypt). O app publicado no GitHub Pages é HTTPS e o navegador bloqueia chamadas dele para um servidor HTTP.
 - Definir `CHAVES_APARELHOS` (uma chave por aparelho), `SENHA_BANCO` forte e `CORS_ORIGENS` só com os endereços reais.
 - Importar os talhões e testar com um ou dois amostradores de verdade.
-- Ligar o WebGIS às camadas.
+- Preencher `CAMPO_API.url` no WebGIS com o endereço HTTPS do servidor.
 
 ### Antes da produção
 

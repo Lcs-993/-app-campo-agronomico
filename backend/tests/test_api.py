@@ -245,6 +245,37 @@ class TestApi(unittest.TestCase):
         self.assertEqual(talhoes[0]["geometry"]["type"], "MultiPolygon")
         self.assertEqual(talhoes[0]["properties"]["status_liberacao_corte"], "liberado")
         self.assertEqual(talhoes[0]["properties"]["ficha_id"], recente["metadados"]["id"])
+        legivel = self.camada("talhoes_cq_broca", talhao_fid=101, rotulos="pt")["features"][0]["properties"]
+        self.assertEqual(legivel["Liberação de corte"], "Corte liberado")
+        self.assertEqual((legivel["II (%)"], legivel["Talhão"]), (2.0, "TH-1"))
+
+    def test_camada_coletas_no_formato_do_webgis(self):
+        ficha = no_th1(exemplo("cq-infestacao-final-broca.json"))
+        ficha["identificacao"]["data"] = "2026-09-15"
+        id_foto = ficha["amostras"][0]["fotos"][0]["id"]
+        self.enviar(ficha)
+        self.cliente.put(f"/api/v1/fotos/{id_foto}", content=PNG, headers={**AUT, "Content-Type": "image/png"})
+        feicoes = self.camada("coletas", de="2026-09-15", ate="2026-09-15")["features"]
+        self.assertEqual(len(feicoes), 1)
+        props = feicoes[0]["properties"]
+        self.assertEqual(feicoes[0]["geometry"]["type"], "Point")
+        self.assertEqual(props["Tipo"], "Qualidade · Broca")
+        self.assertEqual(props["Nível"], "Moderado")  # II 4% entre o alerta (3%) e o bloqueio (5%)
+        self.assertEqual(props["Resultado"], "II 4,00% (10 de 250 entrenós)")
+        self.assertEqual(props["Status"], "Alerta ao PDA")
+        self.assertEqual((props["Fazenda"], props["Talhão"]), ("9001-FAZENDA TESTE", "TH-1"))
+        self.assertTrue(props["Código"].startswith("CQ-2026-"))
+        self.assertTrue(props["Fotos"].endswith(f"/api/v1/fotos/{id_foto}"))
+        for tecnica in ("data", "fazenda", "talhao_fid", "foto_ids"):
+            self.assertNotIn(tecnica, props)
+
+        solo = no_th1(exemplo("pragas-solo.json"))
+        solo["identificacao"]["data"] = "2026-09-16"
+        self.enviar(solo)
+        props = self.camada("coletas", de="2026-09-16", ate="2026-09-16")["features"][0]["properties"]
+        self.assertEqual(props["Alvo"], "Sphenophorus levis")
+        self.assertEqual(props["Nível"], "Alto")
+        self.assertIsNone(props["Fotos"])
 
     def test_chave_de_leitura(self):
         config = self.cliente.app.state.config
@@ -252,6 +283,11 @@ class TestApi(unittest.TestCase):
         try:
             self.assertEqual(self.cliente.get("/api/v1/camadas/fotos.geojson").status_code, 401)
             self.assertEqual(self.cliente.get("/api/v1/camadas/fotos.geojson", params={"chave": CHAVE_LEITURA}).status_code, 200)
+            fotos = self.cliente.get("/api/v1/camadas/fotos.geojson", params={"chave": CHAVE_LEITURA}).json()["features"]
+            if fotos:
+                url = fotos[0]["properties"]["url"]
+                self.assertTrue(url.endswith(f"?chave={CHAVE_LEITURA}"))
+                self.assertEqual(self.cliente.get(url).status_code, 200)
         finally:
             config.chave_leitura = ""
 
